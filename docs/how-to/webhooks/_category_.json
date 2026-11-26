@@ -1,0 +1,8 @@
+{
+  "label": "Webhooks",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Receive transaction and variation code updates from VTpass on your callback URL."
+  }
+}

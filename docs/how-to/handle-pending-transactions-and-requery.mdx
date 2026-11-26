@@ -1,4 +1,164 @@
 ---
 sidebar_position: 1
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Handle pending transactions and requery
+This guide shows you how to check the status of a transaction with the VTpass requery API.
+Use it when a purchase response doesn't give you a final status, when your request times out, or when you need to confirm a transaction before you give value to your customer.
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Before you start
+You need the `request_id` you sent when you made the transaction.
+Store it with the transaction record in your system, because it's the only reference the requery API accepts.
+See [Request ID](/docs/explanation/request-id-format-and-lagos-time) for the required format.
+
+## Requery a transaction
+Send a `POST` request to `/api/requery` with the `request_id` in the request body.
+Like other `POST` requests, it uses the `api-key` and `secret-key` headers.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/requery" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{"request_id": "2025031010146932932"}'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function requeryTransaction(requestId) {
+  const response = await fetch(`${BASE_URL}/requery`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ request_id: requestId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (data.code === "000" && data.content?.transactions) {
+    return data; // Returns { code, response_description, content, requestId, amount, ... }
+  } else {
+    throw new Error(`VTpass API error: ${JSON.stringify(data)}`);
+  }
+}
+
+requeryTransaction("2025031010146932932")
+  .then((data) => {
+    const { status, transactionId, product_name } = data.content.transactions;
+    console.log(`${product_name} (${transactionId}): ${status}`);
+  })
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body field:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | The unique reference you provided when you made the transaction |
+
+### Expected response
+```json
+{
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"MTN Airtime VTU",
+         "unique_element":"08011111111",
+         "unit_price":20,
+         "quantity":1,
+         "service_verification":null,
+         "channel":"api",
+         "commission":1,
+         "total_amount":19.3,
+         "discount":null,
+         "type":"Airtime Recharge",
+         "email":"user@example.com",
+         "phone":"123450987623",
+         "name":null,
+         "extras":null,
+         "convinience_fee":0,
+         "amount":20,
+         "platform":"api",
+         "method":"wallet",
+         "transactionId":"17415980564672211596777904",
+         "product_id":2,
+         "commission_details": {
+            "amount":1,
+            "rate":"3.50",
+            "rate_type":"percent",
+            "computation_type":"default"
+         }
+      }
+   },
+   "requestId":"2025031010146932932",
+   "amount":20,
+   "transaction_date":"2025-03-10T09:14:16.000000Z",
+   "purchased_code":""
+}
+```
+
+### Response fields
+
+The following table describes the response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `code` | `string` | Response code. `000` means the request succeeded. See [Response codes](/docs/reference/response-codes) |
+| `response_description` | `string` | Text description of the response code |
+| `requestId` | `string` | The `request_id` you sent |
+| `amount` | `number` | Transaction amount |
+| `transaction_date` | `string` | Date and time of the transaction, in ISO 8601 format |
+| `purchased_code` | `string` | Token, PIN, or other code bought in the transaction, if the product returns one. Empty for products like airtime |
+| `content.transactions.status` | `string` | Current status of the transaction, for example `delivered` |
+| `content.transactions.product_name` | `string` | Name of the product bought |
+| `content.transactions.unique_element` | `string` | The phone number, meter number, smartcard number, or other identifier the purchase was made for |
+| `content.transactions.unit_price` | `number` | Price of one unit |
+| `content.transactions.quantity` | `number` | Number of units bought |
+| `content.transactions.type` | `string` | Service category, for example `Airtime Recharge` |
+| `content.transactions.commission` | `number` | Commission you earned on the transaction |
+| `content.transactions.total_amount` | `number` | Amount charged to your wallet after commission |
+| `content.transactions.convinience_fee` | `number` | Convenience fee charged. The key is spelled `convinience_fee` in the API |
+| `content.transactions.method` | `string` | Payment method, for example `wallet` |
+| `content.transactions.transactionId` | `string` | VTpass transaction ID |
+| `content.transactions.product_id` | `number` | VTpass product ID |
+| `content.transactions.commission_details` | `object` | How the commission was calculated: `amount`, `rate`, `rate_type`, and `computation_type` |
+
+## Act on the status
+Check `code` first, then read `content.transactions.status` to decide what to do next:
+
+- **`code` is `000` and status is `delivered`**: the transaction succeeded. Give value to your customer and mark the transaction as complete.
+- **`code` is `000` and status is `initiated` or `pending`**, or **`code` is `099`**: the transaction is still in progress. Don't give value yet. Wait, then requery again.
+- **`code` is `016` or `040`**: the transaction failed or was reversed to your wallet. Mark it as failed in your system.
+- **`code` is `015`**: VTpass has no transaction with that request ID. Check that you sent the right `request_id`.
+
+For every code, see [Response codes](/docs/reference/response-codes).
+
+:::tip
+
+Requery with increasing gaps between attempts, for example after 1, 5, and 15 minutes, rather than in a tight loop. Use [transaction update webhooks](/docs/how-to/webhooks/transaction-update-webhook) to get status updates without polling.
+
+:::

@@ -1,4 +1,278 @@
 ---
 sidebar_position: 5
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Education
+Use the education API to sell WAEC registration PINs, WAEC result checker PINs, and JAMB UTME and Direct Entry PINs.
+Every product uses the same flow: get the product's variation codes, pay, then give the customer the PIN from the response.
+
+## Products
+
+The following table lists the products and how they differ:
+
+| Product | `serviceID` | Verify first | `billersCode` | Returns |
+| :--- | :--- | :--- | :--- | :--- |
+| WAEC registration PIN | `waec-registration` | No | Not used | `tokens` |
+| WAEC result checker PIN | `waec` | No | Not used | `cards` (serial number and PIN) |
+| JAMB PIN (UTME and Direct Entry) | `jamb` | Yes, the JAMB profile ID | JAMB profile ID | `Pin` |
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Endpoints
+
+The following table lists the education endpoints:
+
+| Action | Method | Sandbox URL | Live URL |
+| :--- | :--- | :--- | :--- |
+| Get variation codes | `GET` | `https://sandbox.vtpass.com/api/service-variations?serviceID={serviceID}` | `https://vtpass.com/api/service-variations?serviceID={serviceID}` |
+| Verify JAMB profile ID (JAMB only) | `POST` | `https://sandbox.vtpass.com/api/merchant-verify` | `https://vtpass.com/api/merchant-verify` |
+| Pay | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
+| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+
+Send the `api-key` and `public-key` headers with `GET` requests, and the `api-key` and `secret-key` headers with `POST` requests.
+
+## 1. Get variation codes
+Get the product's PIN types and prices with the [Variation codes API](/docs/tutorials/services/variation-codes). Use the `serviceID` from the [product table](#products).
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/service-variations?serviceID=jamb" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": {
+      "ServiceName":"Jamb",
+      "serviceID":"jamb",
+      "convinience_fee":"0 %",
+      "variations": [
+         {
+            "variation_code":"utme-mock",
+            "name":"UTME PIN (with mock)",
+            "variation_amount":"7700.00",
+            "fixedPrice":"Yes"
+         },
+         {
+            "variation_code":"utme-no-mock",
+            "name":"UTME PIN (without mock)",
+            "variation_amount":"6200.00",
+            "fixedPrice":"Yes"
+         }
+      ]
+   }
+}
+```
+
+The following table shows sample variation codes for the other products:
+
+| Product | `variation_code` | `name` | `variation_amount` |
+| :--- | :--- | :--- | :--- |
+| WAEC registration | `waec-registraion` | WASSCE for Private Candidates - Second Series (2019) | `14450.00` |
+| WAEC result checker | `waecdirect` | WASSCE | `900.00` |
+
+:::note
+
+The WAEC registration code is spelled `waec-registraion` in the API, without the second "t". Always use the codes the API returns.
+
+:::
+
+## 2. Verify the JAMB profile ID
+JAMB only. Skip this step for WAEC.
+
+Candidates get their profile ID from the JAMB website. Verify it before you take payment, so the candidate can confirm the name on the profile.
+
+```js
+curl --request POST \
+  --url "https://sandbox.vtpass.com/api/merchant-verify" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{"billersCode": "0123456789", "serviceID": "jamb", "type": "utme-mock"}'
+```
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `billersCode` | Yes | `string` | Candidate's JAMB profile ID. In sandbox, use `0123456789` |
+| `serviceID` | Yes | `string` | Always `jamb` |
+| `type` | Yes | `string` | `variation_code` of the PIN type the candidate wants, for example `utme-mock` |
+
+```json
+{
+   "code":"000",
+   "content": {
+      "Customer_Name":"Capital James"
+   }
+}
+```
+
+Show `Customer_Name` to the candidate to confirm before you take payment.
+
+## 3. Pay
+The request is the same for every product. Only JAMB needs a `billersCode`.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "2025021812401812345",
+    "serviceID": "waec",
+    "variation_code": "waecdirect",
+    "quantity": 1,
+    "phone": "08011111111"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function buyEducationPin({ requestId, serviceID, variationCode, phone, quantity = 1, profileId }) {
+  const body = {
+    request_id: requestId,
+    serviceID,
+    variation_code: variationCode,
+    phone,
+  };
+
+  if (serviceID === "jamb") {
+    body.billersCode = profileId; // JAMB profile ID you verified
+  } else {
+    body.quantity = quantity; // WAEC only
+  }
+
+  const response = await fetch(`${BASE_URL}/pay`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+buyEducationPin({
+  requestId: generateRequestId(), // See the Request ID page
+  serviceID: "waec",
+  variationCode: "waecdirect",
+  phone: "08011111111",
+})
+  .then((data) => console.log(data.code, data.cards))
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `serviceID` | Yes | `string` | Product's service ID. See the [product table](#products) |
+| `variation_code` | Yes | `string` | `variation_code` from [Get variation codes](#1-get-variation-codes) |
+| `phone` | Yes | `string` | Customer's phone number |
+| `billersCode` | JAMB only | `string` | Candidate's JAMB profile ID you [verified](#2-verify-the-jamb-profile-id) |
+| `quantity` | No | `number` | WAEC only. Number of PINs to buy. Defaults to `1` |
+| `amount` | No | `number` | Ignored. The variation code sets the price |
+
+:::warning
+
+For JAMB, don't charge customers more than the price JAMB has approved.
+
+:::
+
+### Expected response
+A successful payment has the usual transaction fields, plus the PIN. This is a WAEC result checker response:
+
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"WAEC Result Checker PIN",
+         "unique_element":"08011111111",
+         "unit_price":900,
+         "quantity":1,
+         "service_verification":null,
+         "channel":"api",
+         "commission":100,
+         "total_amount":800,
+         "discount":null,
+         "type":"Education",
+         "email":"sandbox@vtpass.com",
+         "phone":"07061933309",
+         "name":null,
+         "convinience_fee":0,
+         "amount":900,
+         "platform":"api",
+         "method":"api",
+         "transactionId":"1582290782154"
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"20250218124018-c3pwwi49eid",
+   "amount":"900.00",
+   "transaction_date":"2025-02-18T11:40:20.000000Z",
+   "purchased_code":"Serial No:WRN123456790, pin: 098765432112",
+   "cards": [
+      {
+         "Serial":"WRN123456790",
+         "Pin":"098765432112"
+      }
+   ]
+}
+```
+
+The `content.transactions` fields are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+
+:::note
+
+A `000` code doesn't always mean the PIN was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+
+:::
+
+## 4. Give the customer their PIN
+Every product returns the PIN as text in `purchased_code`. Each product also returns it in its own structured field, which is easier to read in code. The following table shows both fields for each product:
+
+| Product | Structured field | Structured field example | `purchased_code` example |
+| :--- | :--- | :--- | :--- |
+| JAMB | `Pin`: text | `"Pin : 3678251321392432"` | `Pin : 3678251321392432` |
+| WAEC registration | `tokens`: array of PINs | `["0100070365657400875"]` | `Token: 0100070365657400875` |
+| WAEC result checker | `cards`: array of `{ Serial, Pin }` objects, one for each PIN | `[{ "Serial": "WRN123456790", "Pin": "098765432112" }]` | `Serial No:WRN123456790, pin: 098765432112` |
+
+Show the PIN to the customer as soon as the payment is `delivered`, and send it to them by email or SMS. The requery response also returns the PIN, so you can get it again if you lose it.
+
+## Check transaction status
+Use the request ID to check the status of any education payment. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+
+## Test in sandbox
+
+The following table lists the sandbox test values:
+
+| Product | Test value | Result |
+| :--- | :--- | :--- |
+| JAMB | Profile ID `0123456789` | Successful verification and payment |
+| JAMB | Any other profile ID | Failed verification |

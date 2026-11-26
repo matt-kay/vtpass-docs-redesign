@@ -28,3 +28,66 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Tables: Google developer documentation style
+ * Grey header row, horizontal row dividers only, no zebra striping. */
+:root {
+  --vt-table-header-bg: #e8eaed;
+  --vt-table-header-color: #202124;
+  --vt-table-border: #dadce0;
+  --vt-table-row-bg: transparent;
+}
+
+[data-theme='dark'] {
+  --vt-table-header-bg: #303134;
+  --vt-table-header-color: #e8eaed;
+  --vt-table-border: #3c4043;
+}
+
+.markdown table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  border: none;
+  border-top: 1px solid var(--vt-table-border);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.markdown table thead tr {
+  background-color: var(--vt-table-header-bg);
+  border-bottom: 1px solid var(--vt-table-border);
+}
+
+.markdown table th {
+  color: var(--vt-table-header-color);
+  font-weight: 500;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown table tr {
+  background-color: var(--vt-table-row-bg);
+  border: none;
+  border-bottom: 1px solid var(--vt-table-border);
+}
+
+/* Remove Infima's zebra striping */
+.markdown table tr:nth-child(2n) {
+  background-color: var(--vt-table-row-bg);
+}
+
+.markdown table th,
+.markdown table td {
+  border: none;
+  padding: 0.75rem 1rem;
+  vertical-align: top;
+}
+
+/* Let wide tables scroll sideways on small screens instead of overflowing the page */
+@media (max-width: 996px) {
+  .markdown table {
+    display: block;
+    overflow-x: auto;
+  }
+}

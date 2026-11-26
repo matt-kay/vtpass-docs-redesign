@@ -1,0 +1,61 @@
+---
+sidebar_position: 4
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Make first request
+You are awesome, for your first request lets query your VTpass wallet balance.
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Get VTpass wallet balance request
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+   curl --request GET \
+  --url https://sandbox.vtpass.com/api/balance \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const url = "https://sandbox.vtpass.com/api/balance"; // Switch to https://vtpass.com/api/balance for live
+
+async function getVtpassBalance() {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "public-key": "YOUR_PUBLIC_KEY",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`VTpass API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+getVtpassBalance()
+  .then((data) => console.log("Wallet Balance:", data.contents?.balance))
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+### Expected response
+```json
+{
+   "code":1,
+   "contents":{
+      "balance":1081.8199999998
+   }
+}
+```

@@ -1,0 +1,129 @@
+---
+sidebar_position: 3
+---
+
+# Handle variation codes update webhooks
+This guide shows you how to keep your stored variation codes in sync with VTpass.
+VTpass sends this webhook to your callback URL when a service has new, changed, or removed [variation codes](/docs/tutorials/services/variation-codes).
+It includes the full list of the service's current variation codes, plus a report of what changed.
+
+:::info
+
+Make sure you have [set up your callback URL](./set-up-callback-url.mdx).
+
+:::
+
+## Update your variation codes
+1. Read `serviceID` to find which service changed.
+2. Read `actionRequired` to see which variation codes were added, updated, or removed.
+3. Update your stored codes:
+   - **Added**: add the codes in `actionRequired.added.variation_codes`.
+   - **Updated**: replace the name and price of the codes in `actionRequired.updated.variation_codes` with the values from `data.content.variations`.
+   - **Removed**: remove or turn off the codes in `actionRequired.removed.variation_codes`, so customers can't buy them.
+4. Respond with `{"response": "success"}`. See [Receive and acknowledge webhooks](./set-up-callback-url.mdx#receive-and-acknowledge-webhooks).
+
+:::tip
+
+`data.content.variations` always holds the full, current list for the service. If you'd rather not apply each change, replace all stored codes for the service with this list.
+
+:::
+
+```js showLineNumbers title="/src/webhooks.js"
+async function handleVariationsUpdate(payload) {
+  const { serviceID, actionRequired, data } = payload;
+  const current = new Map(
+    data.content.variations.map((v) => [v.variation_code, v])
+  );
+
+  const toUpsert = [
+    ...actionRequired.added.variation_codes,
+    ...actionRequired.updated.variation_codes,
+  ]
+    .map((code) => current.get(code))
+    .filter(Boolean)
+    .map((v) => ({
+      serviceID,
+      code: v.variation_code,
+      label: v.name,
+      price: Number(v.variation_amount),
+      isFixed: v.fixedPrice === "Yes",
+    }));
+
+  await db.variations.upsertMany(toUpsert);
+  await db.variations.deactivate(serviceID, actionRequired.removed.variation_codes);
+}
+```
+
+## Example payload
+```json
+{
+   "type":"variations-update",
+   "response_description":"VARIATION CODE UPDATE",
+   "serviceID":"smile-direct",
+   "service":"Smile Payment",
+   "summary": {
+      "added_variation_codes":0,
+      "updated_variation_codes":38,
+      "removed_variation_codes":23
+   },
+   "data": {
+      "response_description":"000",
+      "content": {
+         "ServiceName":"Smile Payment",
+         "serviceID":"smile-direct",
+         "convinience_fee":"N0.00",
+         "variations": [
+            {
+               "variation_code":"516",
+               "name":"...",
+               "variation_amount":"...",
+               "fixedPrice":"Yes"
+            },
+            {
+               "variation_code":"413",
+               "name":"...",
+               "variation_amount":"...",
+               "fixedPrice":"Yes"
+            },
+            ...
+         ]
+      }
+   },
+   "actionRequired": {
+      "added": {
+         "total":0,
+         "variation_codes":[]
+      },
+      "updated": {
+         "total":38,
+         "variation_codes":["624", "625", "626", ...]
+      },
+      "removed": {
+         "total":23,
+         "variation_codes":["545", "522", "546", ...]
+      }
+   },
+   "datetime":"2020-06-11 23-31-15"
+}
+```
+
+:::note
+
+The payload also includes `data.content.varations`, a misspelled copy of `variations` with the same content. Use `variations`.
+
+:::
+
+## Payload fields
+
+The following table describes the payload fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | Yes | `string` | Webhook type, `variations-update` |
+| `serviceID` | Yes | `string` | ID of the service whose variation codes changed, for example `smile-direct` |
+| `service` | Yes | `string` | Display name of the service |
+| `summary` | Yes | `object` | Number of variation codes added, updated, and removed: `added_variation_codes`, `updated_variation_codes`, and `removed_variation_codes` |
+| `data` | Yes | `object` | The service's current variation codes, in the same format as the [Variation codes API](/docs/tutorials/services/variation-codes) response |
+| `data.content.variations` | Yes | `array` | Full list of the service's current variation codes |
+| `actionRequired` | Yes | `object` | The changes to apply, grouped as `added`, `updated`, and `removed`. Each group has a `total` and a `variation_codes` list |
+| `datetime` | Yes | `string` | When VTpass sent the update |

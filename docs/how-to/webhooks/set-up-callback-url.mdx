@@ -1,0 +1,104 @@
+---
+sidebar_position: 1
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Set up your callback URL
+This guide shows you how to set up a callback URL so VTpass can send updates to your system.
+VTpass uses your callback URL to send the two types of webhook in the following table:
+
+| Webhook | `type` value | Sent when |
+| :--- | :--- | :--- |
+| [Transaction update](./transaction-update-webhook.mdx) | `transaction-update` | A transaction reaches its final state, such as delivered or reversed |
+| [Variation codes update](./variation-codes-update-webhook.mdx) | `variations-update` | A service has new, changed, or removed variation codes |
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Add your callback URL
+1. Log in to your VTpass dashboard.
+2. Enter your callback URL in your account settings and save it.
+
+Your callback URL must:
+- Be publicly reachable over the internet.
+- Accept `POST` requests with a JSON body.
+
+## Receive and acknowledge webhooks
+Every webhook is a `POST` request with a JSON body. The body always has a `type` key that tells you which webhook it is, and a `data` key with the details. Some webhooks include more keys.
+
+When you receive a webhook, respond with this JSON body:
+
+```json
+{
+   "response":"success"
+}
+```
+
+VTpass keeps resending the webhook until it gets this response, up to 5 attempts.
+
+:::warning
+
+Send the `success` response as soon as you receive the webhook, before you do any slow or resource-heavy work such as database updates or calls to other services. Do that work after you respond.
+
+:::
+
+<Tabs>
+  <TabItem value="js" label="Javascript" default>
+    ```js showLineNumbers title="/src/webhooks.js"
+    const express = require("express");
+
+const app = express();
+app.use(express.json());
+
+app.post("/vtpass/callback", (req, res) => {
+  const { type, data } = req.body;
+
+  // Acknowledge first so VTpass doesn't retry
+  res.status(200).json({ response: "success" });
+
+  // Then process the webhook
+  setImmediate(() => {
+    switch (type) {
+      case "transaction-update":
+        handleTransactionUpdate(data);
+        break;
+      case "variations-update":
+        handleVariationsUpdate(req.body);
+        break;
+      default:
+        console.warn(`Unknown VTpass webhook type: ${type}`);
+    }
+  });
+});
+
+function handleTransactionUpdate(data) {
+  // See the Transaction update webhook guide
+}
+
+function handleVariationsUpdate(payload) {
+  // See the Variation codes update webhook guide
+}
+
+app.listen(3000);
+    ```
+  </TabItem>
+  <TabItem value="curl" label="Curl">
+   Send a test webhook to your local server to check that it responds correctly:
+   ```js
+  curl --request POST \
+  --url "http://localhost:3000/vtpass/callback" \
+  --header "Content-Type: application/json" \
+  --data '{"type": "transaction-update", "data": {"code": "000", "requestId": "2025031010146932932"}}'
+   ```
+  </TabItem>
+</Tabs>
+
+:::tip
+
+VTpass can send the same webhook more than once. Make your handler idempotent: for example, check whether you've already processed the `requestId` before you update a transaction.
+
+:::

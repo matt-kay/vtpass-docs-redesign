@@ -1,0 +1,151 @@
+---
+sidebar_position: 2
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Services ID API
+ This section contains the recommended flow for getting the available service IDs on VTpass RESTful API.
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Get service IDs
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request GET \
+  --url "https://sandbox.vtpass.com/api/services?identifier=data" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function getServicesByCategory(identifier = "data") {
+  const url = `${BASE_URL}/services?identifier=${encodeURIComponent(identifier)}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "public-key": "YOUR_PUBLIC_KEY",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (data.response_description === "000" && Array.isArray(data.content)) {
+    return data.content;
+  } else {
+    throw new Error(`VTpass API error: ${JSON.stringify(data)}`);
+  }
+}
+
+getServicesByCategory("data")
+  .then((services) => {
+    console.log("Available Services:", services);
+    // Example: extract serviceIDs for the next step (/api/service-variations or /api/pay)
+    const serviceIds = services.map((s) => s.serviceID);
+    console.log("Service IDs:", serviceIds);
+  })
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+### Expected response
+```json
+{
+    "response_description": "000",
+    "content": [
+        {
+            "serviceID": "airtel-data",
+            "name": "Airtel Data",
+            "minimium_amount": "1",
+            "maximum_amount": "1000000",
+            "convinience_fee": "0 %",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/Airtel-Data.jpg"
+        },
+        {
+            "serviceID": "mtn-data",
+            "name": "MTN Data",
+            "minimium_amount": "1",
+            "maximum_amount": "1000000",
+            "convinience_fee": "0 %",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/MTN-Data.jpg"
+        },
+        {
+            "serviceID": "glo-data",
+            "name": "GLO Data",
+            "minimium_amount": "1",
+            "maximum_amount": "200000",
+            "convinience_fee": "0 %",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/GLO-Data.jpg"
+        },
+        {
+            "serviceID": "etisalat-data",
+            "name": "9mobile Data",
+            "minimium_amount": "1",
+            "maximum_amount": "1000000",
+            "convinience_fee": "0 %",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/9mobile-Data.jpg"
+        },
+        {
+            "serviceID": "smile-direct",
+            "name": "Smile Payment",
+            "minimium_amount": "100",
+            "maximum_amount": "150000",
+            "convinience_fee": "N0",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/Smile-Payment.jpg"
+        },
+        {
+            "serviceID": "spectranet",
+            "name": "Spectranet Internet Data",
+            "minimium_amount": "1",
+            "maximum_amount": "100000",
+            "convinience_fee": "N0",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/Spectranet.jpg"
+        },
+        {
+            "serviceID": "glo-sme-data",
+            "name": "GLO Data (SME)",
+            "minimium_amount": "1",
+            "maximum_amount": "1000000",
+            "convinience_fee": "0 %",
+            "product_type": "fix",
+            "image": "https://sandbox.vtpass.com/resources/products/200X200/GLO-Data-(SME).jpg"
+        }
+    ]
+}
+```
+
+### Response fields
+
+The following table describes the response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `response_description` | `string` | Response code. `000` means the request succeeded |
+| `content` | `array` | List of services in the requested category |
+| `content[].serviceID` | `string` | Service ID. Use it in the [Variation codes API](./variation-codes.mdx), [Product options API](./product-options.mdx), and purchase requests |
+| `content[].name` | `string` | Display name of the service |
+| `content[].minimium_amount` | `string` | Minimum amount you can pay for the service. The key is spelled `minimium_amount` in the API |
+| `content[].maximum_amount` | `string` | Maximum amount you can pay for the service |
+| `content[].convinience_fee` | `string` | Convenience fee charged for the service, as a percentage (for example, `0 %`) or a fixed naira amount (for example, `N0`). The key is spelled `convinience_fee` in the API |
+| `content[].product_type` | `string` | Product type, for example `fix` |
+| `content[].image` | `string` | URL of the service logo |

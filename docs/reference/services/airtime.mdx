@@ -1,4 +1,436 @@
 ---
 sidebar_position: 1
 ---
-# Airtime Recharge
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Airtime recharge
+Use the airtime API to top up phone numbers on Nigerian networks (MTN, Glo, Airtel, and 9mobile) and on international networks.
+
+The following table lists the networks and their service IDs:
+
+| Network | `serviceID` |
+| :--- | :--- |
+| MTN | `mtn` |
+| Glo | `glo` |
+| Airtel | `airtel` |
+| 9mobile | `etisalat` |
+| International airtime and data | `foreign-airtime` |
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Endpoints
+
+The following table lists the airtime endpoints:
+
+| Action | Method | Sandbox URL | Live URL |
+| :--- | :--- | :--- | :--- |
+| Buy airtime | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
+| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+
+Both endpoints are `POST` requests, so send the `api-key` and `secret-key` headers.
+
+## Buy Nigerian airtime
+Send the network's `serviceID`, the amount, and the recipient's phone number.
+The request is the same for every Nigerian network. Only the `serviceID` changes.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "2025031010146932932",
+    "serviceID": "mtn",
+    "amount": 100,
+    "phone": "08011111111"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+// network: "mtn" | "glo" | "airtel" | "etisalat"
+async function buyAirtime({ requestId, network, amount, phone }) {
+  const response = await fetch(`${BASE_URL}/pay`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      request_id: requestId,
+      serviceID: network,
+      amount,
+      phone,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+buyAirtime({
+  requestId: generateRequestId(), // See the Request ID page
+  network: "mtn",
+  amount: 100,
+  phone: "08011111111",
+})
+  .then((data) => {
+    const status = data.content?.transactions?.status;
+    console.log(`${data.code} ${data.response_description}: ${status}`);
+  })
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `serviceID` | Yes | `string` | Network to top up: `mtn`, `glo`, `airtel`, or `etisalat` (9mobile) |
+| `amount` | Yes | `number` | Amount to top up, in naira |
+| `phone` | Yes | `string` | Phone number to top up |
+
+### Expected response
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"MTN Airtime VTU",
+         "unique_element":"08011111111",
+         "unit_price":"100",
+         "quantity":1,
+         "service_verification":null,
+         "channel":"api",
+         "commission":3.5,
+         "total_amount":96.5,
+         "discount":null,
+         "type":"Airtime Recharge",
+         "email":"user@example.com",
+         "phone":"123450987623",
+         "name":null,
+         "convinience_fee":0,
+         "amount":"100",
+         "platform":"api",
+         "method":"api",
+         "transactionId":"17415980564672211596777904",
+         "commission_details": {
+            "amount":3.5,
+            "rate":"3.50",
+            "rate_type":"percent",
+            "computation_type":"default"
+         }
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"2025031010146932932",
+   "amount":100,
+   "transaction_date":"2025-03-10T09:14:16.000000Z",
+   "purchased_code":""
+}
+```
+
+The response has the same fields as the requery response. See [Response fields](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+
+:::note
+
+A `000` code doesn't always mean the airtime was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+
+:::
+
+## Buy international airtime
+International airtime uses the `foreign-airtime` service ID. Before you buy, look up the IDs you need in four steps:
+
+1. Get the country `code`.
+2. Get the `product_type_id`, such as airtime or data, for that country.
+3. Get the `operator_id` for that country and product type.
+4. Get the `variation_code` for the plan you want.
+
+These lookups are `GET` requests, so send the `api-key` and `public-key` headers.
+
+### 1. Get countries
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/get-international-airtime-countries" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": {
+      "countries": [
+         {
+            "code":"GH",
+            "flag":"https://sandbox.vtpass.com/resources/images/flags/GH.png",
+            "name":"Ghana",
+            "currency":"GHS",
+            "prefix":"233"
+         },
+         ...
+      ]
+   }
+}
+```
+
+Use `code` as the `code` query parameter in the next steps, and as `country_code` when you buy.
+
+### 2. Get product types
+
+The following table describes the query parameter:
+
+| Query parameter | Required | Description |
+| :--- | :--- | :--- |
+| `code` | Yes | Country `code` from step 1 |
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/get-international-airtime-product-types?code=GH" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": [
+      {
+         "product_type_id":1,
+         "name":"Mobile Top Up"
+      },
+      {
+         "product_type_id":4,
+         "name":"Mobile Data"
+      }
+   ]
+}
+```
+
+### 3. Get operators
+
+The following table describes the query parameters:
+
+| Query parameter | Required | Description |
+| :--- | :--- | :--- |
+| `code` | Yes | Country `code` from step 1 |
+| `product_type_id` | Yes | `product_type_id` from step 2 |
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/get-international-airtime-operators?code=GH&product_type_id=4" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": [
+      {
+         "operator_id":"5",
+         "name":"Ghana MTN",
+         "operator_image":"https://sandbox.vtpass.com/resources/images/operators/5.png"
+      },
+      ...
+   ]
+}
+```
+
+### 4. Get variation codes
+This uses the same [Variation codes API](/docs/tutorials/services/variation-codes) as other services, with two extra query parameters.
+
+The following table describes the query parameters:
+
+| Query parameter | Required | Description |
+| :--- | :--- | :--- |
+| `serviceID` | Yes | Always `foreign-airtime` |
+| `operator_id` | Yes | `operator_id` from step 3 |
+| `product_type_id` | Yes | `product_type_id` from step 2 |
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/service-variations?serviceID=foreign-airtime&operator_id=5&product_type_id=4" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": {
+      "ServiceName":"International Airtime",
+      "serviceID":"foreign-airtime",
+      "convinience_fee":"0 %",
+      "variations": [
+         {
+            "variation_code":"5186",
+            "name":"Weekly 1.5GB Mobile Data",
+            "variation_amount":"0.00",
+            "fixedPrice":"Yes"
+         },
+         ...
+      ]
+   }
+}
+```
+
+:::note
+
+VTpass charges your wallet in naira. For a fixed-price variation, the price is set by the variation. For a flexible-price variation, the naira amount is the `variation_rate` multiplied by the amount in the local currency.
+
+:::
+
+### 5. Buy international airtime
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "2025031016099807136",
+    "serviceID": "foreign-airtime",
+    "billersCode": "08011111111",
+    "variation_code": "5186",
+    "phone": "08011111111",
+    "operator_id": "5",
+    "country_code": "GH",
+    "product_type_id": "4",
+    "email": "customer@example.com"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function buyInternationalAirtime(order) {
+  const response = await fetch(`${BASE_URL}/pay`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      request_id: order.requestId,
+      serviceID: "foreign-airtime",
+      billersCode: order.phone,
+      variation_code: order.variationCode,
+      phone: order.phone,
+      operator_id: order.operatorId,
+      country_code: order.countryCode,
+      product_type_id: order.productTypeId,
+      email: order.email,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+buyInternationalAirtime({
+  requestId: generateRequestId(), // See the Request ID page
+  phone: "08011111111",
+  variationCode: "5186",
+  operatorId: "5",
+  countryCode: "GH",
+  productTypeId: "4",
+  email: "customer@example.com",
+})
+  .then((data) => console.log(data.code, data.content?.transactions?.status))
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | Unique reference for the transaction. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `serviceID` | Yes | `string` | Always `foreign-airtime` |
+| `billersCode` | Yes | `string` | Phone number to top up |
+| `variation_code` | Yes | `string` | `variation_code` from step 4 |
+| `amount` | No | `number` | Ignored. The variation code sets the price |
+| `phone` | Yes | `string` | Customer's phone number |
+| `operator_id` | Yes | `string` | `operator_id` from step 3 |
+| `country_code` | Yes | `string` | Country `code` from step 1 |
+| `product_type_id` | Yes | `string` | `product_type_id` from step 2 |
+| `email` | Yes | `string` | Customer's email address |
+
+### Expected response
+The response has the same fields as a [Nigerian airtime purchase](#expected-response), plus these international fields:
+
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"International Airtime",
+         ...
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"2025031016099807136",
+   "amount":2,
+   "transaction_date":"2025-03-10T15:09:52.000000Z",
+   "purchased_code":"",
+   "cards":null,
+   "CountryName":"UNKNOWN",
+   "CountryCode":"GH",
+   "OperatorAmount":"UNKNOWNUNKNOWN",
+   "Amount":"NGN2"
+}
+```
+
+The following table describes the international fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `cards` | `object` | PIN details for PIN-based products, including recharge instructions. `null` for direct top-ups |
+| `CountryName` | `string` | Name of the destination country |
+| `CountryCode` | `string` | Code of the destination country |
+| `OperatorAmount` | `string` | Amount in the operator's local currency |
+| `Amount` | `string` | Amount charged, with currency, for example `NGN2` |
+
+## Check transaction status
+Use the request ID to check the status of any airtime purchase. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+
+## Test in sandbox
+In sandbox, the phone number you send decides the result. These numbers work for Nigerian and international airtime.
+
+The following table lists the sandbox test numbers:
+
+| Phone number | Result | Use it to test |
+| :--- | :--- | :--- |
+| `08011111111` | Successful | A successful purchase |
+| `201000000000` | Pending | How you handle a pending transaction |
+| `500000000000` | Unexpected response | How you handle an unexpected response |
+| `400000000000` | No response | How you handle no response |
+| `300000000000` | Timeout | How you handle a timeout |
+| Any other number | Failed | How you handle a failed transaction |

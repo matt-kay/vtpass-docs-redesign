@@ -1,4 +1,345 @@
 ---
 sidebar_position: 3
 ---
-# Electricity Bill
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Electricity bill
+Use the electricity API to buy prepaid tokens and pay postpaid bills for customers of Nigerian electricity distribution companies (DisCos).
+Every DisCo follows the same flow: verify the meter number, pay, then give the customer their token.
+
+- **Prepaid meters**: the payment returns a token. The customer enters it on their meter to load the units.
+- **Postpaid meters**: the payment settles the customer's bill. There's no token.
+
+## Electricity companies
+The request is the same for every company. Only the `serviceID` changes.
+
+The following table lists the companies, their service IDs, and the areas they cover:
+
+| Company | `serviceID` | Coverage |
+| :--- | :--- | :--- |
+| Aba Electric (ABA) | `aba-electric` | Abia |
+| Abuja Electric (AEDC) | `abuja-electric` | FCT, Kogi, Niger, Nasarawa |
+| Benin Electric (BEDC) | `benin-electric` | Delta, Edo, Ekiti, Ondo |
+| Eko Electric (EKEDC) | `eko-electric` | Lagos: Apapa, Lekki, Ibeju, Island, Agbara, Ojo, Festac, Ijora, Mushin, Orile |
+| Enugu Electric (EEDC) | `enugu-electric` | Abia, Anambra, Ebonyi, Enugu, Imo |
+| Ibadan Electric (IBEDC) | `ibadan-electric` | Oyo, Ogun, Osun, Kwara, and parts of Niger, Ekiti, and Kogi. See the [IBEDC minimum amounts](#minimum-amounts) |
+| Ikeja Electric (IKEDC) | `ikeja-electric` | Lagos: Abule Egba, Akowonjo, Ikeja, Ikorodu, Oshodi, Shomolu |
+| Jos Electric (JED) | `jos-electric` | Bauchi, Benue, Gombe, Plateau |
+| Kaduna Electric (KAEDCO) | `kaduna-electric` | Kaduna, Kebbi, Sokoto, Zamfara |
+| Kano Electric (KEDCO) | `kano-electric` | Kano, Katsina, Jigawa |
+| Port Harcourt Electric (PHED) | `portharcourt-electric` | Rivers, Bayelsa, Cross River, Akwa Ibom |
+| Yola Electric (YEDC) | `yola-electric` | Adamawa, Taraba, Borno, Yobe |
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Endpoints
+
+The following table lists the electricity endpoints:
+
+| Action | Method | Sandbox URL | Live URL |
+| :--- | :--- | :--- | :--- |
+| Verify meter number | `POST` | `https://sandbox.vtpass.com/api/merchant-verify` | `https://vtpass.com/api/merchant-verify` |
+| Pay | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
+| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+
+All three are `POST` requests, so send the `api-key` and `secret-key` headers.
+
+## 1. Verify the meter number
+Always verify the meter number before you take payment. Verification confirms the meter exists and returns the customer's name and address, so the customer can check they're paying for the right meter.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/merchant-verify" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "billersCode": "1111111111111",
+    "serviceID": "ikeja-electric",
+    "type": "prepaid"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function verifyMeter({ serviceID, meterNumber, meterType }) {
+  const response = await fetch(`${BASE_URL}/merchant-verify`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      billersCode: meterNumber,
+      serviceID,
+      type: meterType, // "prepaid" or "postpaid"
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.code !== "000" || data.content?.WrongBillersCode) {
+    throw new Error(`Meter verification failed: ${JSON.stringify(data)}`);
+  }
+
+  return data.content; // Customer_Name, Address, Meter_Type, Min_Purchase_Amount, ...
+}
+
+verifyMeter({ serviceID: "ikeja-electric", meterNumber: "1111111111111", meterType: "prepaid" })
+  .then((customer) => console.log(`${customer.Customer_Name}, ${customer.Address}`))
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `billersCode` | Yes | `string` | Meter number or account ID |
+| `serviceID` | Yes | `string` | Electricity company. See [Electricity companies](#electricity-companies) |
+| `type` | Yes | `string` | Meter type: `prepaid` or `postpaid` |
+
+### Expected response
+```json
+{
+   "code":"000",
+   "content": {
+      "Customer_Name":"TESTMETER1",
+      "Address":"ABULE EGBA BU ABULE",
+      "Meter_Number":"68100017372",
+      "Customer_Arrears":"",
+      "Minimum_Amount":"",
+      "Min_Purchase_Amount":"",
+      "Can_Vend":"yes",
+      "Business_Unit":"",
+      "Customer_Account_Type":"PRIME",
+      "Meter_Type":"PREPAID",
+      "WrongBillersCode":false,
+      "commission_details": {
+         "amount":null,
+         "rate":"1.50",
+         "rate_type":"percent",
+         "computation_type":"default"
+      }
+   }
+}
+```
+
+The fields in `content` vary by company. The following table describes the ones you'll use most:
+
+| Field | Description |
+| :--- | :--- |
+| `Customer_Name` | Name on the meter. Show it to the customer to confirm |
+| `Address` | Address on the meter |
+| `Meter_Type` | `PREPAID` or `POSTPAID` |
+| `Customer_Account_Type` | Account type, such as `MD` (Maximum Demand, for large consumers) or `NMD` (Non-Maximum Demand, for households and small consumers). Your commission rate depends on it |
+| `Min_Purchase_Amount` | Lowest amount the customer can pay, if the company sets one |
+| `Customer_Arrears` | Outstanding debt on the meter, if any |
+| `WrongBillersCode` | `true` if the meter number is invalid |
+
+## 2. Pay
+Send the verified meter number, the meter type as `variation_code`, and the amount in naira.
+Prepaid and postpaid payments use the same request. Only `variation_code` changes.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "2025031013366434255",
+    "serviceID": "ikeja-electric",
+    "billersCode": "1111111111111",
+    "variation_code": "prepaid",
+    "amount": 2000,
+    "phone": "08011111111"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function payElectricity({ requestId, serviceID, meterNumber, meterType, amount, phone }) {
+  const response = await fetch(`${BASE_URL}/pay`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      request_id: requestId,
+      serviceID,
+      billersCode: meterNumber,
+      variation_code: meterType, // "prepaid" or "postpaid"
+      amount,
+      phone,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+payElectricity({
+  requestId: generateRequestId(), // See the Request ID page
+  serviceID: "ikeja-electric",
+  meterNumber: "1111111111111",
+  meterType: "prepaid",
+  amount: 2000,
+  phone: "08011111111",
+})
+  .then((data) => {
+    if (data.content?.transactions?.status === "delivered") {
+      console.log(`Token: ${data.purchased_code}, Units: ${data.units}`);
+    }
+  })
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `serviceID` | Yes | `string` | Electricity company. See [Electricity companies](#electricity-companies) |
+| `billersCode` | Yes | `string` | Meter number or account ID you verified |
+| `variation_code` | Yes | `string` | Meter type: `prepaid` or `postpaid` |
+| `amount` | Yes | `number` | Amount to pay, in naira |
+| `phone` | Yes | `string` | Customer's phone number |
+
+### Expected response
+This is a successful prepaid payment. A postpaid response has the same structure, but `purchased_code` is empty and there are no token or units fields.
+
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"Ikeja Electric Payment - IKEDC",
+         "unique_element":"1111111111111",
+         "unit_price":"2000",
+         "quantity":1,
+         "service_verification":null,
+         "channel":"api",
+         "commission":30,
+         "total_amount":1970,
+         "discount":null,
+         "type":"Electricity Bill",
+         "email":"sandbox@sandbox.vtpass.com",
+         "phone":"123450987623",
+         "name":null,
+         "convinience_fee":0,
+         "amount":"2000",
+         "platform":"api",
+         "method":"api",
+         "transactionId":"17416102247366731230557150",
+         "commission_details": {
+            "amount":30,
+            "rate":"1.50",
+            "rate_type":"percent",
+            "computation_type":"default"
+         }
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"2025031013366434255",
+   "amount":2000,
+   "transaction_date":"2025-03-10T12:37:04.000000Z",
+   "purchased_code":"Token : 26362054405982757802",
+   "customerName":"N/A",
+   "customerAddress":"N/A",
+   "token":"Token : 26362054405982757802",
+   "tokenAmount":1860.47,
+   "exchangeReference":"40532461",
+   "units":"79.9 kWh",
+   "tariff":"R2 SINGLE PHASE RESIDENTIAL",
+   "taxAmount":0,
+   "debtAmount":0,
+   ...
+}
+```
+
+The `content.transactions` fields are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields). The top-level electricity fields vary by company. The following table describes the ones you'll use most:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `purchased_code` | `string` | Prepaid token, in the form `Token : 26362054405982757802`. Empty for postpaid |
+| `units` | `string` | Units bought, for example `79.9 kWh` |
+| `tokenAmount` | `number` | Value of the token after tax and any debt deductions |
+| `debtAmount` | `number` | Amount deducted to clear outstanding debt on the meter |
+| `taxAmount` | `number` | Tax deducted |
+| `tariff` | `string` | Customer's tariff class |
+| `exchangeReference` | `string` | Electricity company's reference for the payment |
+
+:::tip
+
+Read the token from `purchased_code`, and strip the `Token :` prefix before you show it. Some companies also return the token in other fields, such as `token` or `mainToken` (EKEDC), and the field names vary, so don't rely on them.
+
+If a prepaid payment is `delivered` but `purchased_code` is empty, the company hasn't returned the token yet. [Requery the transaction](/docs/how-to/handle-pending-transactions-and-requery) to get it.
+
+:::
+
+:::warning
+
+Show the token to the customer as soon as the payment is `delivered`, and also send it by email and SMS. The customer can't load their units without it. If you lose the token, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery): the requery response returns `purchased_code` again.
+
+:::
+
+:::note
+
+A `000` code doesn't always mean the payment was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, requery the transaction. See [Response codes](/docs/reference/response-codes) for every code.
+
+:::
+
+## Minimum amounts
+Some companies set a minimum payment. Check `Min_Purchase_Amount` in the verification response before you take payment.
+
+Ibadan Electric (IBEDC) sets its minimum by service band, which you can read from `Service_Band` in the verification response. The following table lists the minimum amount for each band:
+
+| IBEDC service band | Minimum amount |
+| :--- | :--- |
+| Band A (prepaid) | ₦5,000 |
+| Other bands | ₦2,000 |
+
+## Commission
+Your commission depends on the meter type (`Meter_Type`) and the customer's account type (`Customer_Account_Type`), so it can differ between two payments to the same company. Contact your VTpass account manager for your rates.
+
+## Check transaction status
+Use the request ID to check the status of any electricity payment. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+
+## Test in sandbox
+In sandbox, the `billersCode` you send decides the result. These numbers work for every company.
+
+The following table lists the sandbox test values:
+
+| `billersCode` | Result | Use it to test |
+| :--- | :--- | :--- |
+| `1111111111111` | Successful (prepaid) | Verification and payment for a prepaid meter |
+| `1010101010101` | Successful (postpaid) | Verification and payment for a postpaid meter |
+| `201000000000` | Pending | How you handle a pending transaction |
+| `500000000000` | Unexpected response | How you handle an unexpected response |
+| `400000000000` | No response | How you handle no response |
+| `300000000000` | Timeout | How you handle a timeout |
+| Any other number | Failed | How you handle a failed verification or payment |

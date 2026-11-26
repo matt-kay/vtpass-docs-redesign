@@ -1,0 +1,150 @@
+---
+sidebar_position: 2
+---
+
+# Handle transaction update webhooks
+This guide shows you how to handle the transaction update webhook.
+VTpass sends this webhook to your callback URL when a transaction reaches its final state, so you don't have to keep requerying pending transactions.
+The data is very similar to the [requery](/docs/how-to/handle-pending-transactions-and-requery) response.
+
+:::info
+
+Make sure you have [set up your callback URL](./set-up-callback-url.mdx).
+
+:::
+
+## Match the webhook to your transaction
+Use `data.requestId` to find the transaction in your system. It's the `request_id` you sent when you made the purchase.
+
+## Read the status
+Check `data.code`, then read `data.content.transactions.status` for the actual state of the transaction.
+A `000` code can cover more than one state, so always check the status.
+
+The following table shows what each combination of code and status means, and what to do:
+
+| `code` | `status` | What it means | What to do |
+| :--- | :--- | :--- | :--- |
+| `000` | `delivered` | The transaction succeeded | Give value to your customer and mark the transaction as complete |
+| `040` | `reversed` | The service provider bounced the request, and VTpass reversed the money to your wallet | Mark the transaction as failed. Don't give value |
+
+:::note
+
+A `reversed` status isn't the same as `failed`. VTpass reverses a transaction automatically when the service provider rejects it. For other codes, see [Response codes](/docs/reference/response-codes).
+
+:::
+
+After you process the webhook, respond with `{"response": "success"}`. See [Receive and acknowledge webhooks](./set-up-callback-url.mdx#receive-and-acknowledge-webhooks).
+
+```js showLineNumbers title="/src/webhooks.js"
+async function handleTransactionUpdate(data) {
+  const { status, transactionId } = data.content.transactions;
+  const transaction = await db.transactions.findByRequestId(data.requestId);
+
+  // Skip webhooks you've already processed
+  if (!transaction || transaction.status !== "pending") return;
+
+  if (data.code === "000" && status === "delivered") {
+    await db.transactions.markDelivered(data.requestId, transactionId);
+  } else if (data.code === "040" && status === "reversed") {
+    await db.transactions.markReversed(data.requestId, data.content.transactions.wallet_credit_id);
+  }
+}
+```
+
+## Delivered transaction
+### Example payload
+```json
+{
+   "type":"transaction-update",
+   "data": {
+      "code":"000",
+      "content": {
+         "transactions": {
+            "status":"delivered",
+            "product_name":"Airtel Airtime",
+            "unique_element":"08011111111",
+            "unit_price":5,
+            "quantity":1,
+            "service_verification":null,
+            "channel":"api",
+            "commission":0,
+            "total_amount":4.85,
+            "discount":null,
+            "type":"Airtime Recharge",
+            "email":"user@example.com",
+            "phone":"07061933309",
+            "name":null,
+            "convinience_fee":0,
+            "amount":5,
+            "platform":"api",
+            "method":"wallet",
+            "transactionId":"1583519914158857111079"
+         }
+      },
+      "response_description":"TRANSACTION DELIVERED",
+      "amount":5,
+      "transaction_date":null,
+      "requestId":"2025031010146932932",
+      "purchased_code":""
+   }
+}
+```
+
+### Payload fields
+
+The following table describes the payload fields for a delivered transaction:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | Yes | `string` | Webhook type. Always `transaction-update` |
+| `data.code` | Yes | `string` | Response code. See [Response codes](/docs/reference/response-codes) |
+| `data.content.transactions.status` | Yes | `string` | Final state of the transaction |
+| `data.content.transactions.transactionId` | Yes | `string` | VTpass transaction ID |
+| `data.requestId` | Yes | `string` | The `request_id` you sent when you made the transaction |
+| `data.response_description` | Yes | `string` | Text description of the result, for example `TRANSACTION DELIVERED` |
+
+The other fields in `data.content.transactions` are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+
+## Reversed transaction
+### Example payload
+```json
+{
+   "type":"transaction-update",
+   "data": {
+      "code":"040",
+      "content": {
+         "transactions": {
+            "status":"reversed",
+            "unique_element":"08011111111",
+            "unit_price":50,
+            "commission":2,
+            "total_amount":48.5,
+            "discount":null,
+            "amount":50,
+            "transactionId":"1583501216545377109916",
+            "wallet_credit_id":"15835022148401519675278125"
+         }
+      },
+      "response_description":"TRANSACTION REVERSAL TO WALLET",
+      "amount":48.5,
+      "transaction_date":null,
+      "requestId":"2025031010146932932",
+      "purchased_code":""
+   }
+}
+```
+
+### Payload fields
+
+The following table describes the payload fields for a reversed transaction:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | Yes | `string` | Webhook type. Always `transaction-update` |
+| `data.code` | Yes | `string` | Response code. `040` means the transaction was reversed to your wallet |
+| `data.amount` | Yes | `float` | Amount reversed to your wallet. This is the amount VTpass charged you after your discount, so it can differ from `data.content.transactions.amount` |
+| `data.content.transactions.status` | Yes | `string` | Final state of the transaction. `reversed` for a reversal |
+| `data.content.transactions.transactionId` | Yes | `string` | VTpass transaction ID |
+| `data.content.transactions.wallet_credit_id` | Yes | `string` | ID of the wallet credit that reversed the transaction |
+| `data.requestId` | Yes | `string` | The `request_id` you sent when you made the transaction |
+| `data.response_description` | Yes | `string` | Text description of the result, for example `TRANSACTION REVERSAL TO WALLET` |

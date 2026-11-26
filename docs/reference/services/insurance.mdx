@@ -1,4 +1,263 @@
 ---
 sidebar_position: 6
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Insurance
+Use the insurance API to sell third-party motor insurance from Universal Insurance.
+A successful payment returns a link to the customer's insurance certificate.
+
+The service ID is `ui-insure`, and the `billersCode` is the vehicle's plate number.
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## How it works
+1. Get the insurance plan for the vehicle type.
+2. Look up the codes for the vehicle's details: engine capacity, color, make, and model, plus the owner's state and local government area (LGA).
+3. Pay with the plan, the vehicle's details, and the owner's details.
+4. Give the customer the link to their certificate.
+
+Send the `api-key` and `public-key` headers with `GET` requests, and the `api-key` and `secret-key` headers with `POST` requests.
+
+## 1. Get the plan
+Get the plans with the [Variation codes API](/docs/tutorials/services/variation-codes). There's one plan for each vehicle type.
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/service-variations?serviceID=ui-insure" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+The following table lists the plans:
+
+| `variation_code` | Vehicle type | `variation_amount` |
+| :--- | :--- | :--- |
+| `1` | Private | `3000.00` |
+| `2` | Commercial | `5000.00` |
+| `3` | Tricycles | `1500.00` |
+| `4` | Motorcycle | `3000.00` |
+
+Prices can change, so fetch the plans from the API rather than hardcoding them.
+
+## 2. Look up the vehicle and owner codes
+The payment needs codes, not names, for the vehicle's details and the owner's location. The following table lists the `GET` endpoints that return each code:
+
+| Lookup | Path | Code to send | Sent as |
+| :--- | :--- | :--- | :--- |
+| Engine capacity | `/api/universal-insurance/options/engine-capacity` | `CapacityCode` | `engine_capacity` |
+| Vehicle color | `/api/universal-insurance/options/color` | `ColourCode` | `vehicle_color` |
+| Vehicle make | `/api/universal-insurance/options/brand` | `VehicleMakeCode` | `vehicle_make` |
+| Vehicle model | `/api/universal-insurance/options/model/{VehicleMakeCode}` | `VehicleModelCode` | `vehicle_model` |
+| State | `/api/universal-insurance/options/state` | `StateCode` | `state` |
+| Local government area | `/api/universal-insurance/options/lga/{StateCode}` | `LGACode` | `lga` |
+
+Use `https://sandbox.vtpass.com` in sandbox and `https://vtpass.com` in live. Get the model list after the customer picks a make, and the LGA list after they pick a state.
+
+For example, to get the models for vehicle make `1`:
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/universal-insurance/options/model/1" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": [
+      {
+         "VehicleModelCode":"745",
+         "VehicleModelName":"3.2TL",
+         "VehicleMakeCode":"1"
+      },
+      {
+         "VehicleModelCode":"1",
+         "VehicleModelName":"CL",
+         "VehicleMakeCode":"1"
+      },
+      ...
+   ]
+}
+```
+
+Every lookup returns a `content` array of objects. Each object has a code field and a name field, for example `ColourCode` and `ColourName`. Show the name to the customer and send the code.
+
+:::tip
+
+These lists rarely change. Cache them in your system rather than calling the lookups for every purchase.
+
+:::
+
+## 3. Pay
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "2025021811026IMK9CF1",
+    "serviceID": "ui-insure",
+    "variation_code": "1",
+    "billersCode": "ATU480ER",
+    "Plate_Number": "ATU480ER",
+    "phone": "08111111111",
+    "email": "customer@example.com",
+    "Insured_Name": "Mr Ajanlekoko",
+    "Chasis_Number": "S12332323FRHJJ433434J",
+    "YearofMake": "2009",
+    "engine_capacity": "1",
+    "vehicle_color": "20",
+    "vehicle_make": "1",
+    "vehicle_model": "745",
+    "state": "1",
+    "lga": "770"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function buyMotorInsurance({ requestId, planCode, vehicle, owner }) {
+  const response = await fetch(`${BASE_URL}/pay`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      request_id: requestId,
+      serviceID: "ui-insure",
+      variation_code: planCode,
+      billersCode: vehicle.plateNumber,
+      Plate_Number: vehicle.plateNumber, // Same as billersCode
+      phone: owner.phone,
+      email: owner.email,
+      Insured_Name: owner.name,
+      Chasis_Number: vehicle.chassisNumber,
+      YearofMake: vehicle.year,
+      engine_capacity: vehicle.capacityCode,
+      vehicle_color: vehicle.colourCode,
+      vehicle_make: vehicle.makeCode,
+      vehicle_model: vehicle.modelCode,
+      state: owner.stateCode,
+      lga: owner.lgaCode,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+buyMotorInsurance({
+  requestId: generateRequestId(), // See the Request ID page
+  planCode: "1", // Private vehicle
+  vehicle: {
+    plateNumber: "ATU480ER",
+    chassisNumber: "S12332323FRHJJ433434J",
+    year: "2009",
+    capacityCode: "1",
+    colourCode: "20",
+    makeCode: "1",
+    modelCode: "745",
+  },
+  owner: {
+    name: "Mr Ajanlekoko",
+    phone: "08111111111",
+    email: "customer@example.com",
+    stateCode: "1",
+    lgaCode: "770",
+  },
+})
+  .then((data) => console.log(data.code, data.certUrl))
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `serviceID` | Yes | `string` | Always `ui-insure` |
+| `variation_code` | Yes | `string` | Plan for the vehicle type, from [Get the plan](#1-get-the-plan) |
+| `billersCode` | Yes | `string` | Vehicle plate number |
+| `Plate_Number` | Yes | `string` | Vehicle plate number. Same as `billersCode` |
+| `phone` | Yes | `string` | Customer's phone number |
+| `email` | Yes | `string` | Customer's email address |
+| `Insured_Name` | Yes | `string` | Name of the vehicle's owner |
+| `Chasis_Number` | Yes | `string` | Vehicle's chassis number. The key is spelled `Chasis_Number` in the API |
+| `YearofMake` | Yes | `string` | Year the vehicle was made |
+| `engine_capacity` | Yes | `string` | `CapacityCode` from the engine capacity lookup |
+| `vehicle_color` | Yes | `string` | `ColourCode` from the color lookup |
+| `vehicle_make` | Yes | `string` | `VehicleMakeCode` from the make lookup |
+| `vehicle_model` | Yes | `string` | `VehicleModelCode` from the model lookup |
+| `state` | Yes | `string` | `StateCode` from the state lookup |
+| `lga` | Yes | `string` | `LGACode` from the LGA lookup |
+| `amount` | No | `number` | Ignored. The plan sets the price |
+
+### Expected response
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"Third Party Motor Insurance - Universal Insurance",
+         "unique_element":"ATU480ER",
+         "unit_price":"3000",
+         "quantity":1,
+         "channel":"api",
+         "type":"Insurance",
+         "amount":"3000",
+         "method":"api",
+         "transactionId":"17398729734891902716575111",
+         ...
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"2025021811026IMK9CF1",
+   "amount":3000,
+   "transaction_date":"2025-02-18T10:02:53.000000Z",
+   "purchased_code":"Download Certificate : https://3rdparty.universalinsuranceonline.com/PrintCertificate.aspx?Data=UPMSB001310125D949061969202",
+   "certUrl":"https://3rdparty.universalinsuranceonline.com/PrintCertificate.aspx?Data=UPMSB001310125D949061969202"
+}
+```
+
+The `content.transactions` fields are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+
+:::note
+
+A `000` code doesn't always mean the policy was issued. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+
+:::
+
+## 4. Give the customer their certificate
+Read the certificate link from `certUrl`. `purchased_code` has the same link with a `Download Certificate :` prefix.
+
+The following table describes the certificate fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `certUrl` | `string` | Link to download the customer's insurance certificate |
+| `purchased_code` | `string` | The same link as text, with a `Download Certificate :` prefix |
+
+Show the link to the customer as soon as the payment is `delivered`, and send it to them by email. The requery response also returns `certUrl`, so you can get the link again if you lose it.
+
+## Check transaction status
+Use the request ID to check the status of any insurance payment. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).

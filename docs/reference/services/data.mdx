@@ -1,4 +1,319 @@
 ---
 sidebar_position: 2
 ---
-# Data Services
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Data subscription
+Use the data API to buy data plans on Nigerian mobile networks, Smile, and Spectranet.
+Every provider follows the same flow: get the list of plans, then buy a plan by its `variation_code`.
+
+## Providers
+
+The following table lists the providers and how they differ:
+
+| Provider | `serviceID` | `billersCode` | What's different |
+| :--- | :--- | :--- | :--- |
+| MTN | `mtn-data` | Phone number | None |
+| Airtel | `airtel-data` | Phone number | None |
+| Glo | `glo-data` | Phone number | None |
+| Glo SME | `glo-sme-data` | Phone number | None |
+| 9mobile | `etisalat-data` | Phone number | None |
+| Smile | `smile-direct` | Smile account ID | [Verify the customer's email first](#smile-verify-the-email-first) |
+| Spectranet | `spectranet` | Phone number | [Returns a PIN to load](#spectranet-read-the-pin) |
+
+:::info
+
+Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+
+:::
+
+## Endpoints
+
+The following table lists the data endpoints:
+
+| Action | Method | Sandbox URL | Live URL |
+| :--- | :--- | :--- | :--- |
+| Get plans | `GET` | `https://sandbox.vtpass.com/api/service-variations?serviceID={serviceID}` | `https://vtpass.com/api/service-variations?serviceID={serviceID}` |
+| Verify Smile email (Smile only) | `POST` | `https://sandbox.vtpass.com/api/merchant-verify/smile/email` | `https://vtpass.com/api/merchant-verify/smile/email` |
+| Buy a plan | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
+| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+
+Send the `api-key` and `public-key` headers with `GET` requests, and the `api-key` and `secret-key` headers with `POST` requests.
+
+## 1. Get plans
+Get the provider's data plans with the [Variation codes API](/docs/tutorials/services/variation-codes). Use the `serviceID` from the [provider table](#providers).
+
+```js
+curl --request GET \
+  --url "https://sandbox.vtpass.com/api/service-variations?serviceID=mtn-data" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+```
+
+```json
+{
+   "response_description":"000",
+   "content": {
+      "ServiceName":"MTN Data",
+      "serviceID":"mtn-data",
+      "convinience_fee":"0 %",
+      "variations": [
+         {
+            "variation_code":"mtn-10mb-100",
+            "name":"N100 100MB - 24 hrs",
+            "variation_amount":"100.00",
+            "fixedPrice":"Yes"
+         },
+         {
+            "variation_code":"mtn-100mb-1000",
+            "name":"N1000 1.5GB - 30 days",
+            "variation_amount":"1000.00",
+            "fixedPrice":"Yes"
+         },
+         ...
+      ]
+   }
+}
+```
+
+Show `name` and `variation_amount` to your customer, and keep `variation_code` to send when they buy.
+
+:::tip
+
+Plans change often. Don't hardcode variation codes: fetch them regularly, or keep them in sync with the [variation codes update webhook](/docs/how-to/webhooks/variation-codes-update-webhook).
+
+:::
+
+:::note
+
+Some responses also include a `varations` key, a misspelled copy of `variations`. Use `variations`.
+
+:::
+
+## 2. Buy a plan
+Send the `serviceID`, the `variation_code`, and the number to load the data on.
+The request is the same for every provider. Only the `serviceID` and `variation_code` change.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "2025031010323857076",
+    "serviceID": "mtn-data",
+    "billersCode": "08011111111",
+    "variation_code": "mtn-10mb-100",
+    "phone": "08011111111"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function buyData({ requestId, serviceID, billersCode, variationCode, phone }) {
+  const body = {
+    request_id: requestId,
+    serviceID,
+    billersCode,
+    variation_code: variationCode,
+    phone,
+  };
+
+  // Spectranet needs a quantity
+  if (serviceID === "spectranet") body.quantity = 1;
+
+  const response = await fetch(`${BASE_URL}/pay`, {
+    method: "POST",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "secret-key": "YOUR_SECRET_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+buyData({
+  requestId: generateRequestId(), // See the Request ID page
+  serviceID: "mtn-data",
+  billersCode: "08011111111",
+  variationCode: "mtn-10mb-100",
+  phone: "08011111111",
+})
+  .then((data) => {
+    const status = data.content?.transactions?.status;
+    console.log(`${data.code} ${data.response_description}: ${status}`);
+  })
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `serviceID` | Yes | `string` | Provider's service ID. See the [provider table](#providers) |
+| `billersCode` | Yes | `string` | Phone number to load the data on. For Smile, the `AccountId` from [email verification](#smile-verify-the-email-first) |
+| `variation_code` | Yes | `string` | `variation_code` of the plan from [Get plans](#1-get-plans) |
+| `phone` | Yes | `string` | Customer's phone number |
+| `amount` | No | `number` | Ignored. The variation code sets the price |
+| `quantity` | Spectranet only | `number` | Number of PINs to buy. Send `1` |
+
+### Expected response
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"MTN Data",
+         "unique_element":"08011111111",
+         "unit_price":"100",
+         "quantity":1,
+         "service_verification":null,
+         "channel":"api",
+         "commission":4,
+         "total_amount":96,
+         "discount":null,
+         "type":"Data Services",
+         "email":"user@example.com",
+         "phone":"123450987623",
+         "name":null,
+         "convinience_fee":0,
+         "amount":"100",
+         "platform":"api",
+         "method":"api",
+         "transactionId":"17415991578739548187285972",
+         "commission_details": {
+            "amount":4,
+            "rate":"4.00",
+            "rate_type":"percent",
+            "computation_type":"default"
+         }
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"2025031010323857076",
+   "amount":100,
+   "transaction_date":"2025-03-10T09:32:37.000000Z",
+   "purchased_code":""
+}
+```
+
+The response has the same fields as the requery response. See [Response fields](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+
+:::note
+
+A `000` code doesn't always mean the data was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+
+:::
+
+## Smile: verify the email first
+Smile accounts are linked to an email address. Before you buy, verify the customer's Smile email to get their account ID, then send that ID as `billersCode` when you buy.
+
+```js
+curl --request POST \
+  --url "https://sandbox.vtpass.com/api/merchant-verify/smile/email" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{"billersCode": "tester@sandbox.com", "serviceID": "smile-direct"}'
+```
+
+The following table describes the request body fields:
+
+| Field | Required | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `billersCode` | Yes | `string` | Customer's Smile email address. In sandbox, use `tester@sandbox.com` |
+| `serviceID` | Yes | `string` | Always `smile-direct` |
+
+```json
+{
+   "code":"000",
+   "content": {
+      "Customer_Name":"THE TESTER ITSELF",
+      "AccountList": {
+         "Account": [
+            {
+               "AccountId":"08011111111",
+               "FriendlyName":"TESTER1"
+            },
+            {
+               "AccountId":"08011111111",
+               "FriendlyName":"TESTER2"
+            }
+         ],
+         "NumberOfAccounts":2
+      }
+   }
+}
+```
+
+A customer can have more than one Smile account. Show `Customer_Name` and each account's `FriendlyName` so the customer can confirm and pick one, then send its `AccountId` as `billersCode`.
+
+## Spectranet: read the PIN
+Spectranet doesn't load data directly. The purchase returns a PIN that the customer loads on their device. Send `"quantity": 1` in the request, then read the PIN from the response:
+
+```json
+{
+   "code":"000",
+   "content": { ... },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   ...
+   "purchased_code":"PIN: 08318586, S/N:2024122310002159",
+   "cards": [
+      {
+         "instructions":null,
+         "serialNumber":"2024122310002159",
+         "pin":"08318586",
+         "expiresOn":"2028-12-23"
+      }
+   ]
+}
+```
+
+The following table describes the PIN fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `purchased_code` | `string` | PIN and serial number as one text string |
+| `cards` | `array` | One object for each PIN bought |
+| `cards[].pin` | `string` | PIN to give the customer |
+| `cards[].serialNumber` | `string` | Serial number of the PIN |
+| `cards[].expiresOn` | `string` | Date the PIN expires, in `YYYY-MM-DD` format |
+| `cards[].instructions` | `string` | How to load the PIN, if VTpass provides them |
+
+Use `cards` instead of parsing `purchased_code`. The requery response also returns `purchased_code` and `cards`, so you can get the PIN again if you lose it.
+
+## Check transaction status
+Use the request ID to check the status of any data purchase. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+
+## Test in sandbox
+In sandbox, the `billersCode` you send decides the result.
+
+The following table lists the sandbox test values:
+
+| `billersCode` | Result | Use it to test |
+| :--- | :--- | :--- |
+| `08011111111` (Spectranet: `1212121212`) | Successful | A successful purchase |
+| `201000000000` | Pending | How you handle a pending transaction |
+| `500000000000` | Unexpected response | How you handle an unexpected response |
+| `400000000000` | No response | How you handle no response |
+| `300000000000` | Timeout | How you handle a timeout |
+| Any other number | Failed | How you handle a failed transaction |
+
+For Smile, verify `tester@sandbox.com` first. Any other email fails verification.
