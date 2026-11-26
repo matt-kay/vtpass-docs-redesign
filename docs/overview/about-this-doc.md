@@ -12,7 +12,7 @@ This documentation is for developers who build VTpass payments into an app, webs
 
 - Send HTTP requests and read JSON responses.
 - Store API keys securely on a server.
-- Write code in a language that can call a REST API. The examples use curl and JavaScript.
+- Write code in a language that can call a web API. The examples use curl and JavaScript.
 
 ## What you can do with the API
 The following table lists the services you can sell with the VTpass API:
