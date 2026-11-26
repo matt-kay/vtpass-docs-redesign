@@ -10,7 +10,7 @@ npm install
 
 **Note**: feel free to use the package manager of your choice.
 
-## Local Development
+## Local development
 
 ```bash
 npm run start
