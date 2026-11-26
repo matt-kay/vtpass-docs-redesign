@@ -1,6 +1,6 @@
-# Website
+# VTPass API
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+Integrate bills payment services available on the VTpass platform on your application.
 
 ## Installation
 
