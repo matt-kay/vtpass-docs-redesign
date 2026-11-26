@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
  This section contains the recommended flow for getting the available service IDs on VTpass RESTful API.
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
@@ -144,8 +144,8 @@ The following table describes the response fields:
 | `content` | `array` | List of services in the requested category |
 | `content[].serviceID` | `string` | Service ID. Use it in the [Variation codes API](./variation-codes.mdx), [Product options API](./product-options.mdx), and purchase requests |
 | `content[].name` | `string` | Display name of the service |
-| `content[].minimium_amount` | `string` | Minimum amount you can pay for the service. The key is spelled `minimium_amount` in the API |
+| `content[].minimium_amount` | `string` | Minimum amount you can pay for the service. The API spells the key `minimium_amount` |
 | `content[].maximum_amount` | `string` | Maximum amount you can pay for the service |
-| `content[].convinience_fee` | `string` | Convenience fee charged for the service, as a percentage (for example, `0 %`) or a fixed naira amount (for example, `N0`). The key is spelled `convinience_fee` in the API |
+| `content[].convinience_fee` | `string` | Convenience fee charged for the service, as a percentage such as `0 %`, or a fixed naira amount such as `N0`. The API spells the key `convinience_fee` |
 | `content[].product_type` | `string` | Product type, for example `fix` |
 | `content[].image` | `string` | URL of the service logo |

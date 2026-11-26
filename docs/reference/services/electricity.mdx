@@ -5,7 +5,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 # Electricity bill
-Use the electricity API to buy prepaid tokens and pay postpaid bills for customers of Nigerian electricity distribution companies (DisCos).
+Use the electricity API to buy prepaid tokens and pay postpaid bills for customers of Nigerian electricity distribution companies, also called DisCos.
 Every DisCo follows the same flow: verify the meter number, pay, then give the customer their token.
 
 - **Prepaid meters**: the payment returns a token. The customer enters it on their meter to load the units.
@@ -21,31 +21,31 @@ The following table lists the companies, their service IDs, and the areas they c
 | Aba Electric (ABA) | `aba-electric` | Abia |
 | Abuja Electric (AEDC) | `abuja-electric` | FCT, Kogi, Niger, Nasarawa |
 | Benin Electric (BEDC) | `benin-electric` | Delta, Edo, Ekiti, Ondo |
-| Eko Electric (EKEDC) | `eko-electric` | Lagos: Apapa, Lekki, Ibeju, Island, Agbara, Ojo, Festac, Ijora, Mushin, Orile |
+| Eko Electric (EKEDC) | `eko-electric` | Apapa, Lekki, Ibeju, Island, Agbara, Ojo, Festac, Ijora, Mushin, and Orile, in Lagos |
 | Enugu Electric (EEDC) | `enugu-electric` | Abia, Anambra, Ebonyi, Enugu, Imo |
 | Ibadan Electric (IBEDC) | `ibadan-electric` | Oyo, Ogun, Osun, Kwara, and parts of Niger, Ekiti, and Kogi. See the [IBEDC minimum amounts](#minimum-amounts) |
-| Ikeja Electric (IKEDC) | `ikeja-electric` | Lagos: Abule Egba, Akowonjo, Ikeja, Ikorodu, Oshodi, Shomolu |
+| Ikeja Electric (IKEDC) | `ikeja-electric` | Abule Egba, Akowonjo, Ikeja, Ikorodu, Oshodi, and Shomolu, in Lagos |
 | Jos Electric (JED) | `jos-electric` | Bauchi, Benue, Gombe, Plateau |
-| Kaduna Electric (KAEDCO) | `kaduna-electric` | Kaduna, Kebbi, Sokoto, Zamfara |
+| Kaduna Electric, KAEDCO | `kaduna-electric` | Kaduna, Kebbi, Sokoto, Zamfara |
 | Kano Electric (KEDCO) | `kano-electric` | Kano, Katsina, Jigawa |
 | Port Harcourt Electric (PHED) | `portharcourt-electric` | Rivers, Bayelsa, Cross River, Akwa Ibom |
 | Yola Electric (YEDC) | `yola-electric` | Adamawa, Taraba, Borno, Yobe |
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
 ## Endpoints
 
-The following table lists the electricity endpoints:
+The following table lists the electricity endpoints for the environment you select in the navigation bar:
 
-| Action | Method | Sandbox URL | Live URL |
-| :--- | :--- | :--- | :--- |
-| Verify meter number | `POST` | `https://sandbox.vtpass.com/api/merchant-verify` | `https://vtpass.com/api/merchant-verify` |
-| Pay | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
-| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+| Action | Method | URL |
+| :--- | :--- | :--- |
+| Verify meter number | `POST` | <EnvUrl path="/api/merchant-verify" /> |
+| Pay | `POST` | <EnvUrl path="/api/pay" /> |
+| Check transaction status | `POST` | <EnvUrl path="/api/requery" /> |
 
 All three are `POST` requests, so send the `api-key` and `secret-key` headers.
 
@@ -143,7 +143,7 @@ The fields in `content` vary by company. The following table describes the ones 
 | `Customer_Name` | Name on the meter. Show it to the customer to confirm |
 | `Address` | Address on the meter |
 | `Meter_Type` | `PREPAID` or `POSTPAID` |
-| `Customer_Account_Type` | Account type, such as `MD` (Maximum Demand, for large consumers) or `NMD` (Non-Maximum Demand, for households and small consumers). Your commission rate depends on it |
+| `Customer_Account_Type` | Account type. `MD` means Maximum Demand and applies to large consumers. `NMD` means Non-Maximum Demand and applies to households and small consumers. Your commission rate depends on it |
 | `Min_Purchase_Amount` | Lowest amount the customer can pay, if the company sets one |
 | `Customer_Arrears` | Outstanding debt on the meter, if any |
 | `WrongBillersCode` | `true` if the meter number is invalid |
@@ -221,7 +221,7 @@ The following table describes the request body fields:
 
 | Field | Required | Type | Description |
 | :--- | :--- | :--- | :--- |
-| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id) |
 | `serviceID` | Yes | `string` | Electricity company. See [Electricity companies](#electricity-companies) |
 | `billersCode` | Yes | `string` | Meter number or account ID you verified |
 | `variation_code` | Yes | `string` | Meter type: `prepaid` or `postpaid` |
@@ -281,7 +281,7 @@ This is a successful prepaid payment. A postpaid response has the same structure
 }
 ```
 
-The `content.transactions` fields are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields). The top-level electricity fields vary by company. The following table describes the ones you'll use most:
+The `content.transactions` fields are the same as in the [requery response](/docs/reference/requery#response-fields). The top-level electricity fields vary by company. The following table describes the ones you'll use most:
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -297,19 +297,19 @@ The `content.transactions` fields are the same as in the [requery response](/doc
 
 Read the token from `purchased_code`, and strip the `Token :` prefix before you show it. Some companies also return the token in other fields, such as `token` or `mainToken` (EKEDC), and the field names vary, so don't rely on them.
 
-If a prepaid payment is `delivered` but `purchased_code` is empty, the company hasn't returned the token yet. [Requery the transaction](/docs/how-to/handle-pending-transactions-and-requery) to get it.
+If a prepaid payment is `delivered` but `purchased_code` is empty, the company hasn't returned the token yet. [Requery the transaction](/docs/how-to/handle-pending-transactions) to get it.
 
 :::
 
 :::warning
 
-Show the token to the customer as soon as the payment is `delivered`, and also send it by email and SMS. The customer can't load their units without it. If you lose the token, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery): the requery response returns `purchased_code` again.
+Show the token to the customer when the payment is `delivered`, and also send it by email and SMS. The customer can't load their units without it. If you lose the token, [requery the transaction](/docs/how-to/handle-pending-transactions): the requery response returns `purchased_code` again.
 
 :::
 
 :::note
 
-A `000` code doesn't always mean the payment was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, requery the transaction. See [Response codes](/docs/reference/response-codes) for every code.
+Only a `delivered` status means success, even when the `code` is `000`. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions). See [Transaction lifecycle](/docs/explanation/transaction-lifecycle).
 
 :::
 
@@ -320,14 +320,14 @@ Ibadan Electric (IBEDC) sets its minimum by service band, which you can read fro
 
 | IBEDC service band | Minimum amount |
 | :--- | :--- |
-| Band A (prepaid) | ₦5,000 |
+| Band A, prepaid | ₦5,000 |
 | Other bands | ₦2,000 |
 
 ## Commission
-Your commission depends on the meter type (`Meter_Type`) and the customer's account type (`Customer_Account_Type`), so it can differ between two payments to the same company. Contact your VTpass account manager for your rates.
+Your commission depends on the meter type, `Meter_Type`, and the customer's account type, `Customer_Account_Type`, so it can differ between two payments to the same company. Contact your VTpass account manager for your rates.
 
 ## Check transaction status
-Use the request ID to check the status of any electricity payment. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+Use the request ID to check the status of any electricity payment. See [Handle pending transactions](/docs/how-to/handle-pending-transactions).
 
 ## Test in sandbox
 In sandbox, the `billersCode` you send decides the result. These numbers work for every company.
@@ -336,8 +336,8 @@ The following table lists the sandbox test values:
 
 | `billersCode` | Result | Use it to test |
 | :--- | :--- | :--- |
-| `1111111111111` | Successful (prepaid) | Verification and payment for a prepaid meter |
-| `1010101010101` | Successful (postpaid) | Verification and payment for a postpaid meter |
+| `1111111111111` | Successful, prepaid | Verification and payment for a prepaid meter |
+| `1010101010101` | Successful, postpaid | Verification and payment for a postpaid meter |
 | `201000000000` | Pending | How you handle a pending transaction |
 | `500000000000` | Unexpected response | How you handle an unexpected response |
 | `400000000000` | No response | How you handle no response |

@@ -1,0 +1,80 @@
+---
+sidebar_position: 2
+description: Endpoint reference for getting your VTpass wallet balance.
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Wallet balance
+Use the wallet balance endpoint to get the current balance of your VTpass wallet. VTpass charges every purchase to this wallet, so check it before you sell, and top it up before it runs low.
+
+## Endpoint
+The following table lists the wallet balance endpoint for the environment you select in the navigation bar:
+
+| Method | URL | Headers |
+| :--- | :--- | :--- |
+| `GET` | <EnvUrl path="/api/balance" /> | `api-key`, `public-key`. See [Authentication](/docs/reference/authentication) |
+
+## Request
+The request has no parameters.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request GET \
+  --url "https://sandbox.vtpass.com/api/balance" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "public-key: YOUR_PUBLIC_KEY"
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+async function getWalletBalance() {
+  const response = await fetch(`${BASE_URL}/balance`, {
+    method: "GET",
+    headers: {
+      "api-key": "YOUR_API_KEY",
+      "public-key": "YOUR_PUBLIC_KEY",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.contents.balance;
+}
+
+getWalletBalance()
+  .then((balance) => console.log(`Wallet balance: ₦${balance}`))
+  .catch((err) => console.error(err));
+    ```
+  </TabItem>
+</Tabs>
+
+## Response
+```json
+{
+   "code":1,
+   "contents": {
+      "balance":1081.8199999998
+   }
+}
+```
+
+## Response fields
+The following table describes the response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `code` | `number` | Result of the request. `1` means the request succeeded |
+| `contents.balance` | `number` | Your wallet balance, in naira |
+
+:::note
+
+This endpoint returns a numeric `code` and a `contents` object, unlike the purchase endpoints, which return a string `code` such as `"000"` and a `content` object.
+
+:::

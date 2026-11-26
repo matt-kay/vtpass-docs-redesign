@@ -15,7 +15,7 @@ VTpass uses your callback URL to send the two types of webhook in the following 
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
@@ -28,7 +28,7 @@ Your callback URL must:
 - Accept `POST` requests with a JSON body.
 
 ## Receive and acknowledge webhooks
-Every webhook is a `POST` request with a JSON body. The body always has a `type` key that tells you which webhook it is, and a `data` key with the details. Some webhooks include more keys.
+Every webhook is a `POST` request with a JSON body. The body always has a `type` key that identifies the webhook, and a `data` key with the details. Some webhooks include more keys.
 
 When you receive a webhook, respond with this JSON body:
 
@@ -42,7 +42,7 @@ VTpass keeps resending the webhook until it gets this response, up to 5 attempts
 
 :::warning
 
-Send the `success` response as soon as you receive the webhook, before you do any slow or resource-heavy work such as database updates or calls to other services. Do that work after you respond.
+Send the `success` response immediately after you receive the webhook, before you do any slow or resource-heavy work such as database updates or calls to other services. Do that work after you respond.
 
 :::
 

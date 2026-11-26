@@ -15,30 +15,30 @@ The following table lists the products and how they differ:
 | Product | `serviceID` | Verify first | `billersCode` | Returns |
 | :--- | :--- | :--- | :--- | :--- |
 | WAEC registration PIN | `waec-registration` | No | Not used | `tokens` |
-| WAEC result checker PIN | `waec` | No | Not used | `cards` (serial number and PIN) |
-| JAMB PIN (UTME and Direct Entry) | `jamb` | Yes, the JAMB profile ID | JAMB profile ID | `Pin` |
+| WAEC result checker PIN | `waec` | No | Not used | A serial number and PIN in `cards` |
+| JAMB PIN for UTME and Direct Entry | `jamb` | Yes, the JAMB profile ID | JAMB profile ID | `Pin` |
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
 ## Endpoints
 
-The following table lists the education endpoints:
+The following table lists the education endpoints for the environment you select in the navigation bar:
 
-| Action | Method | Sandbox URL | Live URL |
-| :--- | :--- | :--- | :--- |
-| Get variation codes | `GET` | `https://sandbox.vtpass.com/api/service-variations?serviceID={serviceID}` | `https://vtpass.com/api/service-variations?serviceID={serviceID}` |
-| Verify JAMB profile ID (JAMB only) | `POST` | `https://sandbox.vtpass.com/api/merchant-verify` | `https://vtpass.com/api/merchant-verify` |
-| Pay | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
-| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+| Action | Method | URL |
+| :--- | :--- | :--- |
+| Get variation codes | `GET` | <EnvUrl path="/api/service-variations?serviceID={serviceID}" /> |
+| Verify JAMB profile ID, for JAMB only | `POST` | <EnvUrl path="/api/merchant-verify" /> |
+| Pay | `POST` | <EnvUrl path="/api/pay" /> |
+| Check transaction status | `POST` | <EnvUrl path="/api/requery" /> |
 
 Send the `api-key` and `public-key` headers with `GET` requests, and the `api-key` and `secret-key` headers with `POST` requests.
 
 ## 1. Get variation codes
-Get the product's PIN types and prices with the [Variation codes API](/docs/tutorials/services/variation-codes). Use the `serviceID` from the [product table](#products).
+Get the product's PIN types and prices with the [Variation codes API](/docs/reference/service-discovery/variation-codes). Use the `serviceID` from the [product table](#products).
 
 ```js
 curl --request GET \
@@ -76,12 +76,12 @@ The following table shows sample variation codes for the other products:
 
 | Product | `variation_code` | `name` | `variation_amount` |
 | :--- | :--- | :--- | :--- |
-| WAEC registration | `waec-registraion` | WASSCE for Private Candidates - Second Series (2019) | `14450.00` |
+| WAEC registration | `waec-registraion` | WASSCE for Private Candidates - Second Series 2019 | `14450.00` |
 | WAEC result checker | `waecdirect` | WASSCE | `900.00` |
 
 :::note
 
-The WAEC registration code is spelled `waec-registraion` in the API, without the second "t". Always use the codes the API returns.
+The API spells the WAEC registration code `waec-registraion`, with one letter missing. Always use the codes the API returns.
 
 :::
 
@@ -189,7 +189,7 @@ The following table describes the request body fields:
 
 | Field | Required | Type | Description |
 | :--- | :--- | :--- | :--- |
-| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id) |
 | `serviceID` | Yes | `string` | Product's service ID. See the [product table](#products) |
 | `variation_code` | Yes | `string` | `variation_code` from [Get variation codes](#1-get-variation-codes) |
 | `phone` | Yes | `string` | Customer's phone number |
@@ -246,11 +246,11 @@ A successful payment has the usual transaction fields, plus the PIN. This is a W
 }
 ```
 
-The `content.transactions` fields are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+The `content.transactions` fields are the same as in the [requery response](/docs/reference/requery#response-fields).
 
 :::note
 
-A `000` code doesn't always mean the PIN was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+Only a `delivered` status means success, even when the `code` is `000`. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions). See [Transaction lifecycle](/docs/explanation/transaction-lifecycle).
 
 :::
 
@@ -263,10 +263,10 @@ Every product returns the PIN as text in `purchased_code`. Each product also ret
 | WAEC registration | `tokens`: array of PINs | `["0100070365657400875"]` | `Token: 0100070365657400875` |
 | WAEC result checker | `cards`: array of `{ Serial, Pin }` objects, one for each PIN | `[{ "Serial": "WRN123456790", "Pin": "098765432112" }]` | `Serial No:WRN123456790, pin: 098765432112` |
 
-Show the PIN to the customer as soon as the payment is `delivered`, and send it to them by email or SMS. The requery response also returns the PIN, so you can get it again if you lose it.
+Show the PIN to the customer when the payment is `delivered`, and send it to them by email or SMS. The requery response also returns the PIN, so you can get it again if you lose it.
 
 ## Check transaction status
-Use the request ID to check the status of any education payment. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+Use the request ID to check the status of any education payment. See [Handle pending transactions](/docs/how-to/handle-pending-transactions).
 
 ## Test in sandbox
 

@@ -11,7 +11,7 @@ This section shows how to get variation codes in a generic form even though you 
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
@@ -112,9 +112,9 @@ The following table describes the response fields:
 | `response_description` | `string` | Response code. `000` means the request succeeded |
 | `content.ServiceName` | `string` | Display name of the service |
 | `content.serviceID` | `string` | Service ID you requested |
-| `content.convinience_fee` | `string` | Convenience fee charged for the service. The key is spelled `convinience_fee` in the API |
+| `content.convinience_fee` | `string` | Convenience fee charged for the service. The API spells the key `convinience_fee` |
 | `content.variations` | `array` | List of variations available for the service |
 | `content.variations[].variation_code` | `string` | Variation code. Send it in your purchase request to choose this plan |
 | `content.variations[].name` | `string` | Display name of the variation |
 | `content.variations[].variation_amount` | `string` | Price of the variation in naira |
-| `content.variations[].fixedPrice` | `string` | `Yes` if the price is fixed, `No` if you can set the amount |
+| `content.variations[].fixedPrice` | `string` | `Yes` if the variation has a fixed price, `No` if you can set the amount |

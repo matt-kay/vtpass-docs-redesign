@@ -11,4 +11,4 @@ Although you have access to all VTpass products, they're turn off by default. To
 - Check the products you would like to vend and click the submit button.
 
 
-You are awesome if you reached this step, proceed to [Make first request](/docs/tutorials/getting-started/make-first-request) to test things out.
+You are awesome if you reached this step, proceed to [Make your first request](/docs/tutorials/getting-started/make-first-request) to test things out.

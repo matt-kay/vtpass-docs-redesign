@@ -1,0 +1,48 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  margin: 0 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 999px;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.mobile {
+  margin: 0.5rem var(--ifm-menu-link-padding-horizontal);
+}
+
+.option {
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ifm-color-emphasis-700);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.option:hover {
+  color: var(--ifm-color-emphasis-900);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 1px;
+}
+
+.selected {
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-color-emphasis-900);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Make live mode stand out, so readers notice the samples hit real money */
+.selected.live {
+  background: #d93025;
+  color: #fff;
+}

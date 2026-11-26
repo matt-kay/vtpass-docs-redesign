@@ -11,7 +11,7 @@ Each product can have more than one option, so change the option `name` to get a
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
@@ -105,6 +105,6 @@ The following table describes the response fields:
 | `content.ServiceName` | `string` | Display name of the service |
 | `content.serviceID` | `string` | Service ID you requested |
 | `content.optionName` | `string` | Option name you requested |
-| `content.optionType` | `string` | How the options are presented, for example `MultipleSelect` |
+| `content.optionType` | `string` | How to present the options, for example `MultipleSelect` |
 | `content.optionLabel` | `string` | Human-readable label for the option |
-| `content.options` | `object` | Map of option values to their display labels. Send the key (for example, `adult`) in your purchase request |
+| `content.options` | `object` | Map of option values to their display labels. Send the key in your purchase request, for example `adult` |

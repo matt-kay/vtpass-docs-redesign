@@ -1,8 +1,8 @@
 {
   "label": "Services",
-  "position": 3,
+  "position": 5,
   "link": {
     "type": "generated-index",
-    "description": "5 minutes to learn the most important Docusaurus concepts."
+    "description": "Endpoints, request fields, responses, and sandbox test values for each service you can sell."
   }
 }

@@ -5,7 +5,7 @@ sidebar_position: 2
 # Handle transaction update webhooks
 This guide shows you how to handle the transaction update webhook.
 VTpass sends this webhook to your callback URL when a transaction reaches its final state, so you don't have to keep requerying pending transactions.
-The data is very similar to the [requery](/docs/how-to/handle-pending-transactions-and-requery) response.
+The data is very similar to the [requery](/docs/how-to/handle-pending-transactions) response.
 
 :::info
 
@@ -103,7 +103,7 @@ The following table describes the payload fields for a delivered transaction:
 | `data.requestId` | Yes | `string` | The `request_id` you sent when you made the transaction |
 | `data.response_description` | Yes | `string` | Text description of the result, for example `TRANSACTION DELIVERED` |
 
-The other fields in `data.content.transactions` are the same as in the [requery response](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+The other fields in `data.content.transactions` are the same as in the [requery response](/docs/reference/requery#response-fields).
 
 ## Reversed transaction
 ### Example payload
@@ -141,7 +141,7 @@ The following table describes the payload fields for a reversed transaction:
 | Field | Required | Type | Description |
 | :--- | :--- | :--- | :--- |
 | `type` | Yes | `string` | Webhook type. Always `transaction-update` |
-| `data.code` | Yes | `string` | Response code. `040` means the transaction was reversed to your wallet |
+| `data.code` | Yes | `string` | Response code. `040` means VTpass reversed the transaction and returned the money to your wallet |
 | `data.amount` | Yes | `float` | Amount reversed to your wallet. This is the amount VTpass charged you after your discount, so it can differ from `data.content.transactions.amount` |
 | `data.content.transactions.status` | Yes | `string` | Final state of the transaction. `reversed` for a reversal |
 | `data.content.transactions.transactionId` | Yes | `string` | VTpass transaction ID |

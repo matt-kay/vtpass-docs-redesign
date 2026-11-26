@@ -24,25 +24,25 @@ The following table lists the providers and how they differ:
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
 ## Endpoints
 
-The following table lists the data endpoints:
+The following table lists the data endpoints for the environment you select in the navigation bar:
 
-| Action | Method | Sandbox URL | Live URL |
-| :--- | :--- | :--- | :--- |
-| Get plans | `GET` | `https://sandbox.vtpass.com/api/service-variations?serviceID={serviceID}` | `https://vtpass.com/api/service-variations?serviceID={serviceID}` |
-| Verify Smile email (Smile only) | `POST` | `https://sandbox.vtpass.com/api/merchant-verify/smile/email` | `https://vtpass.com/api/merchant-verify/smile/email` |
-| Buy a plan | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
-| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+| Action | Method | URL |
+| :--- | :--- | :--- |
+| Get plans | `GET` | <EnvUrl path="/api/service-variations?serviceID={serviceID}" /> |
+| Verify Smile email, for Smile only | `POST` | <EnvUrl path="/api/merchant-verify/smile/email" /> |
+| Buy a plan | `POST` | <EnvUrl path="/api/pay" /> |
+| Check transaction status | `POST` | <EnvUrl path="/api/requery" /> |
 
 Send the `api-key` and `public-key` headers with `GET` requests, and the `api-key` and `secret-key` headers with `POST` requests.
 
 ## 1. Get plans
-Get the provider's data plans with the [Variation codes API](/docs/tutorials/services/variation-codes). Use the `serviceID` from the [provider table](#providers).
+Get the provider's data plans with the [Variation codes API](/docs/reference/service-discovery/variation-codes). Use the `serviceID` from the [provider table](#providers).
 
 ```js
 curl --request GET \
@@ -165,7 +165,7 @@ The following table describes the request body fields:
 
 | Field | Required | Type | Description |
 | :--- | :--- | :--- | :--- |
-| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id) |
 | `serviceID` | Yes | `string` | Provider's service ID. See the [provider table](#providers) |
 | `billersCode` | Yes | `string` | Phone number to load the data on. For Smile, the `AccountId` from [email verification](#smile-verify-the-email-first) |
 | `variation_code` | Yes | `string` | `variation_code` of the plan from [Get plans](#1-get-plans) |
@@ -214,16 +214,16 @@ The following table describes the request body fields:
 }
 ```
 
-The response has the same fields as the requery response. See [Response fields](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+The response has the same fields as the requery response. See [Response fields](/docs/reference/requery#response-fields).
 
 :::note
 
-A `000` code doesn't always mean the data was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+Only a `delivered` status means success, even when the `code` is `000`. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions). See [Transaction lifecycle](/docs/explanation/transaction-lifecycle).
 
 :::
 
 ## Smile: verify the email first
-Smile accounts are linked to an email address. Before you buy, verify the customer's Smile email to get their account ID, then send that ID as `billersCode` when you buy.
+Each Smile account belongs to an email address. Before you buy, verify the customer's Smile email to get their account ID, then send that ID as `billersCode` when you buy.
 
 ```js
 curl --request POST \
@@ -300,7 +300,7 @@ The following table describes the PIN fields:
 Use `cards` instead of parsing `purchased_code`. The requery response also returns `purchased_code` and `cards`, so you can get the PIN again if you lose it.
 
 ## Check transaction status
-Use the request ID to check the status of any data purchase. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+Use the request ID to check the status of any data purchase. See [Handle pending transactions](/docs/how-to/handle-pending-transactions).
 
 ## Test in sandbox
 In sandbox, the `billersCode` you send decides the result.
@@ -309,7 +309,7 @@ The following table lists the sandbox test values:
 
 | `billersCode` | Result | Use it to test |
 | :--- | :--- | :--- |
-| `08011111111` (Spectranet: `1212121212`) | Successful | A successful purchase |
+| `08011111111`, or `1212121212` for Spectranet | Successful | A successful purchase |
 | `201000000000` | Pending | How you handle a pending transaction |
 | `500000000000` | Unexpected response | How you handle an unexpected response |
 | `400000000000` | No response | How you handle no response |

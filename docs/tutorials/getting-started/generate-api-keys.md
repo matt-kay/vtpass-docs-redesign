@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# API key authentication
+# Generate your API keys
 VTpass uses API Keys for authentication, to generate API keys kindly follow the steps below.
 
 ## How to generate your API keys
@@ -39,4 +39,4 @@ api-key: xxxxxxxxxxxxxxxxxxxx
 secret-key: SK_xxxxxxxxxxxxxxxxx
 ```
 :::
-once you have your API keys proceed to [Whitelist products](http://localhost:3000/docs/tutorials/getting-started/whitelist-products)
+once you have your API keys proceed to [Whitelist products](/docs/tutorials/getting-started/whitelist-products)

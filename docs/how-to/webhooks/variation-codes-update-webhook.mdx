@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Handle variation codes update webhooks
 This guide shows you how to keep your stored variation codes in sync with VTpass.
-VTpass sends this webhook to your callback URL when a service has new, changed, or removed [variation codes](/docs/tutorials/services/variation-codes).
+VTpass sends this webhook to your callback URL when a service has new, changed, or removed [variation codes](/docs/reference/service-discovery/variation-codes).
 It includes the full list of the service's current variation codes, plus a report of what changed.
 
 :::info
@@ -15,7 +15,7 @@ Make sure you have [set up your callback URL](./set-up-callback-url.mdx).
 
 ## Update your variation codes
 1. Read `serviceID` to find which service changed.
-2. Read `actionRequired` to see which variation codes were added, updated, or removed.
+2. Read `actionRequired` to see which variation codes VTpass added, updated, or removed.
 3. Update your stored codes:
    - **Added**: add the codes in `actionRequired.added.variation_codes`.
    - **Updated**: replace the name and price of the codes in `actionRequired.updated.variation_codes` with the values from `data.content.variations`.
@@ -123,7 +123,7 @@ The following table describes the payload fields:
 | `serviceID` | Yes | `string` | ID of the service whose variation codes changed, for example `smile-direct` |
 | `service` | Yes | `string` | Display name of the service |
 | `summary` | Yes | `object` | Number of variation codes added, updated, and removed: `added_variation_codes`, `updated_variation_codes`, and `removed_variation_codes` |
-| `data` | Yes | `object` | The service's current variation codes, in the same format as the [Variation codes API](/docs/tutorials/services/variation-codes) response |
+| `data` | Yes | `object` | The service's current variation codes, in the same format as the [Variation codes API](/docs/reference/service-discovery/variation-codes) response |
 | `data.content.variations` | Yes | `array` | Full list of the service's current variation codes |
 | `actionRequired` | Yes | `object` | The changes to apply, grouped as `added`, `updated`, and `removed`. Each group has a `total` and a `variation_codes` list |
 | `datetime` | Yes | `string` | When VTpass sent the update |

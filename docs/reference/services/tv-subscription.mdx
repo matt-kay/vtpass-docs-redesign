@@ -21,25 +21,25 @@ The following table lists the providers and how they differ:
 
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
 ## Endpoints
 
-The following table lists the TV subscription endpoints:
+The following table lists the TV subscription endpoints for the environment you select in the navigation bar:
 
-| Action | Method | Sandbox URL | Live URL |
-| :--- | :--- | :--- | :--- |
-| Get bouquets | `GET` | `https://sandbox.vtpass.com/api/service-variations?serviceID={serviceID}` | `https://vtpass.com/api/service-variations?serviceID={serviceID}` |
-| Verify smartcard number | `POST` | `https://sandbox.vtpass.com/api/merchant-verify` | `https://vtpass.com/api/merchant-verify` |
-| Pay | `POST` | `https://sandbox.vtpass.com/api/pay` | `https://vtpass.com/api/pay` |
-| Check transaction status | `POST` | `https://sandbox.vtpass.com/api/requery` | `https://vtpass.com/api/requery` |
+| Action | Method | URL |
+| :--- | :--- | :--- |
+| Get bouquets | `GET` | <EnvUrl path="/api/service-variations?serviceID={serviceID}" /> |
+| Verify smartcard number | `POST` | <EnvUrl path="/api/merchant-verify" /> |
+| Pay | `POST` | <EnvUrl path="/api/pay" /> |
+| Check transaction status | `POST` | <EnvUrl path="/api/requery" /> |
 
 Send the `api-key` and `public-key` headers with `GET` requests, and the `api-key` and `secret-key` headers with `POST` requests.
 
 ## 1. Get bouquets
-Get the provider's bouquets (subscription plans) with the [Variation codes API](/docs/tutorials/services/variation-codes). Use the `serviceID` from the [provider table](#providers).
+Get the provider's bouquets, which are its subscription plans, with the [Variation codes API](/docs/reference/service-discovery/variation-codes). Use the `serviceID` from the [provider table](#providers).
 
 ```js
 curl --request GET \
@@ -186,14 +186,14 @@ The following table describes the verification fields and which providers return
 | `Status` | DStv, GOtv | Subscription status, for example `ACTIVE` |
 | `Due_Date` | DStv, GOtv | Date the current subscription ends. The format differs between DStv and GOtv |
 | `Current_Bouquet` | DStv, GOtv | Customer's current bouquet |
-| `Renewal_Amount` | DStv, GOtv | Amount to renew the current bouquet. Use it as `amount` when you [renew](#renew-the-current-bouquet-dstv-and-gotv) |
+| `Renewal_Amount` | DStv, GOtv | Amount to renew the current bouquet. Use it as `amount` when you [renew](#renew-the-current-bouquet-for-dstv-and-gotv) |
 | `Balance` | StarTimes | Balance on the customer's StarTimes account |
 | `WrongBillersCode` | StarTimes | `true` if the smartcard number is invalid |
 
 ## 3. Pay
 How you pay depends on the provider:
 
-- **DStv and GOtv**: show the customer their current bouquet and renewal amount, then ask whether they want to [renew](#renew-the-current-bouquet-dstv-and-gotv) it or [change](#change-bouquet-or-subscribe) to a different one.
+- **DStv and GOtv**: show the customer their current bouquet and renewal amount, then ask whether they want to [renew](#renew-the-current-bouquet-for-dstv-and-gotv) it or [change](#change-bouquet-or-subscribe) to a different one.
 - **StarTimes and Showmax**: [subscribe to a bouquet](#change-bouquet-or-subscribe).
 
 ### Change bouquet or subscribe
@@ -271,16 +271,16 @@ The following table describes the request body fields:
 
 | Field | Required | Type | Description |
 | :--- | :--- | :--- | :--- |
-| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id-format-and-lagos-time) |
+| `request_id` | Yes | `string` | Unique reference for the transaction. Use it to requery the transaction later. See [Request ID](/docs/explanation/request-id) |
 | `serviceID` | Yes | `string` | Provider's service ID. See the [provider table](#providers) |
-| `billersCode` | Yes | `string` | Smartcard number, StarTimes eWallet number, or (for Showmax) phone number |
+| `billersCode` | Yes | `string` | Smartcard number, StarTimes eWallet number, or phone number for Showmax |
 | `variation_code` | Yes | `string` | `variation_code` of the bouquet from [Get bouquets](#1-get-bouquets) |
 | `phone` | Yes | `string` | Customer's phone number |
 | `subscription_type` | DStv and GOtv only | `string` | Always `change` |
 | `quantity` | No | `number` | DStv and GOtv only. Number of months to pay for, for example `1` |
 | `amount` | No | `number` | Amount to pay. If you leave it out, VTpass uses the bouquet price. If you send it, VTpass tops up the decoder with that amount |
 
-### Renew the current bouquet (DStv and GOtv)
+### Renew the current bouquet for DStv and GOtv
 Use this when a returning DStv or GOtv customer wants to keep their current bouquet.
 Send `subscription_type: "renew"` and set `amount` to the `Renewal_Amount` from [verification](#2-verify-the-smartcard-number). You don't need a `variation_code`.
 
@@ -358,11 +358,11 @@ The renewal amount can be lower than the bouquet's listed price because of promo
 }
 ```
 
-The response has the same fields as the requery response. See [Response fields](/docs/how-to/handle-pending-transactions-and-requery#response-fields).
+The response has the same fields as the requery response. See [Response fields](/docs/reference/requery#response-fields).
 
 :::note
 
-A `000` code doesn't always mean the subscription was delivered. Check `content.transactions.status`: only `delivered` means success. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions-and-requery). See [Response codes](/docs/reference/response-codes) for every code.
+Only a `delivered` status means success, even when the `code` is `000`. If the status is `initiated` or `pending`, [requery the transaction](/docs/how-to/handle-pending-transactions). See [Transaction lifecycle](/docs/explanation/transaction-lifecycle).
 
 :::
 
@@ -394,7 +394,7 @@ The following table describes the voucher fields:
 The requery response also returns `purchased_code` and `Voucher`, so you can get the code again if you lose it.
 
 ## Check transaction status
-Use the request ID to check the status of any TV subscription. See [Handle pending transactions and requery](/docs/how-to/handle-pending-transactions-and-requery).
+Use the request ID to check the status of any TV subscription. See [Handle pending transactions](/docs/how-to/handle-pending-transactions).
 
 ## Test in sandbox
 In sandbox, the `billersCode` you send decides the result.
@@ -403,7 +403,7 @@ The following table lists the sandbox test values:
 
 | `billersCode` | Result | Use it to test |
 | :--- | :--- | :--- |
-| `1212121212` (Showmax: `08011111111`) | Successful | Verification and a successful payment |
+| `1212121212`, or `08011111111` for Showmax | Successful | Verification and a successful payment |
 | `201000000000` | Pending | How you handle a pending transaction |
 | `500000000000` | Unexpected response | How you handle an unexpected response |
 | `400000000000` | No response | How you handle no response |

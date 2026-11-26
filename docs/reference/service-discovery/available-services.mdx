@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 This section contains the recommended flow for getting the available service categories on VTpass RESTful API.
 :::info
 
-Make sure you have done the following: [integrate with VTpass API](/docs/tutorials/getting-started/integrate-with-vtpass-api), [API key authentication](/docs/tutorials/getting-started/create-api-key), and [Whitelist products](/docs/tutorials/getting-started/whitelist-products)
+Before you start, [create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account), [generate your API keys](/docs/tutorials/getting-started/generate-api-keys), and [whitelist the products](/docs/tutorials/getting-started/whitelist-products) you want to sell.
 
 :::
 
@@ -105,5 +105,5 @@ The following table describes the response fields:
 | :--- | :--- | :--- |
 | `response_description` | `string` | Response code. `000` means the request succeeded |
 | `content` | `array` | List of available service categories |
-| `content[].identifier` | `string` | Category identifier. Pass it as `identifier` to the [Services ID API](./services-id.mdx) |
+| `content[].identifier` | `string` | Category identifier. Pass it as `identifier` to the [Services ID API](./service-ids.mdx) |
 | `content[].name` | `string` | Display name of the category |

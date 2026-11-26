@@ -23,7 +23,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'matt-kay', // Usually your GitHub org/user name.
-  projectName: 'vtpass-docs', // Usually your repo name.
+  projectName: 'vtpass-docs-redesign', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -41,26 +41,10 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          // "Edit this page" links: Docusaurus appends each file's path (for example docs/how-to/x.md).
+          editUrl: 'https://github.com/matt-kay/vtpass-docs-redesign/edit/main/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -75,10 +59,12 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'VTpass API',
+      title: 'API docs',
       logo: {
-        alt: 'VTpass Logo',
-        src: 'img/logo.svg',
+        alt: 'VTpass',
+        src: 'img/vtpass-logo.png',
+        srcDark: 'img/vtpass-logo-white.png',
+        height: 24,
       },
       items: [
         {
@@ -97,13 +83,13 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'howtoSidebar',
           position: 'left',
-          label: 'How-To Guides',
+          label: 'How-to guides',
         },
         {
           type: 'docSidebar',
           sidebarId: 'referenceSidebar',
           position: 'left',
-          label: 'API Reference',
+          label: 'API reference',
         },
         {
           type: 'docSidebar',
@@ -111,48 +97,55 @@ const config: Config = {
           position: 'left',
           label: 'Concepts',
         },
+        {
+          type: 'custom-envToggle',
+          position: 'right',
+        },
       ],
     },
     footer: {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Get started',
           items: [
-            {
-              label: 'Tutorial',
-              to: '/docs/intro',
-            },
+            {label: 'Create a sandbox account', to: '/docs/tutorials/getting-started/create-sandbox-account'},
+            {label: 'Generate your API keys', to: '/docs/tutorials/getting-started/generate-api-keys'},
+            {label: 'Make your first purchase', to: '/docs/tutorials/getting-started/make-first-purchase'},
           ],
         },
         {
-          title: 'Community',
+          title: 'Guides',
           items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
-            },
+            {label: 'Handle pending transactions', to: '/docs/how-to/handle-pending-transactions'},
+            {label: 'Webhooks', to: '/docs/category/webhooks'},
+            {label: 'Go live', to: '/docs/how-to/go-live'},
           ],
         },
         {
-          title: 'More',
+          title: 'API reference',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
-            },
+            {label: 'Authentication', to: '/docs/reference/authentication'},
+            {label: 'Services', to: '/docs/category/services'},
+            {label: 'Requery', to: '/docs/reference/requery'},
+            {label: 'Response codes', to: '/docs/reference/response-codes'},
+          ],
+        },
+        {
+          title: 'Concepts',
+          items: [
+            {label: 'Transaction lifecycle', to: '/docs/explanation/transaction-lifecycle'},
+            {label: 'Request ID', to: '/docs/explanation/request-id'},
+            {label: 'Commission', to: '/docs/explanation/commission'},
+          ],
+        },
+        {
+          title: 'Resources',
+          items: [
+            {label: 'About this API document', to: '/docs/overview/about-this-doc'},
+            {label: "What's new", to: '/docs/overview/whats-new'},
+            {label: 'VTpass support', href: 'mailto:support@vtpass.com'},
+            {label: 'GitHub', href: 'https://github.com/matt-kay/vtpass-docs-redesign'},
           ],
         },
       ],

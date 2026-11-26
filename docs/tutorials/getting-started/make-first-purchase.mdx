@@ -1,0 +1,183 @@
+---
+sidebar_position: 5
+description: Buy airtime in sandbox, read the response, and confirm the transaction with a requery.
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Make your first purchase
+In this tutorial, you buy ₦100 of MTN airtime in sandbox, check that the customer received it, and confirm it with a requery. It takes about 10 minutes, and costs nothing, because sandbox uses a test wallet.
+
+You'll learn how to:
+
+- Create a request ID.
+- Send a purchase request.
+- Read the response code and transaction status.
+- Check a transaction's status with a requery.
+
+## Before you begin
+Complete the earlier tutorials:
+
+1. [Create a sandbox account](/docs/tutorials/getting-started/create-sandbox-account).
+2. [Generate your API keys](/docs/tutorials/getting-started/generate-api-keys).
+3. [Whitelist products](/docs/tutorials/getting-started/whitelist-products). Make sure you turned on MTN airtime.
+4. [Make your first request](/docs/tutorials/getting-started/make-first-request).
+
+You need your API key and secret key. To run the JavaScript examples, use Node.js 18 or later, and save each example in a file that ends in `.mjs`.
+
+## 1. Create a request ID
+Every purchase needs a unique request ID. It must start with today's date and time in Lagos time, in the format `YYYYMMDDHHMM`, followed by any extra characters you want.
+
+Run the following command to create one:
+
+<Tabs>
+  <TabItem value="curl" label="Shell" default>
+   ```bash
+  echo "$(TZ=Africa/Lagos date +%Y%m%d%H%M)$RANDOM$RANDOM"
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    function generateRequestId() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(new Date()).map((p) => [p.type, p.value])
+  );
+  const hour = parts.hour === "24" ? "00" : parts.hour;
+  const suffix = Math.random().toString(36).slice(2, 12);
+  return `${parts.year}${parts.month}${parts.day}${hour}${parts.minute}${suffix}`;
+}
+
+console.log(generateRequestId());
+    ```
+  </TabItem>
+</Tabs>
+
+You get a value like `2025031010146932932`. Copy it: you use it in the next two steps.
+
+To learn more about the format, see [Request ID](/docs/explanation/request-id).
+
+## 2. Buy airtime
+Send a purchase request to the pay endpoint. Replace `YOUR_REQUEST_ID` with the request ID from step 1, and use your own keys.
+
+The phone number `08011111111` is a sandbox test number that always returns a successful purchase.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/pay" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "request_id": "YOUR_REQUEST_ID",
+    "serviceID": "mtn",
+    "amount": 100,
+    "phone": "08011111111"
+  }'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+const response = await fetch(`${BASE_URL}/pay`, {
+  method: "POST",
+  headers: {
+    "api-key": "YOUR_API_KEY",
+    "secret-key": "YOUR_SECRET_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    request_id: "YOUR_REQUEST_ID",
+    serviceID: "mtn",
+    amount: 100,
+    phone: "08011111111",
+  }),
+});
+
+console.log(JSON.stringify(await response.json(), null, 2));
+    ```
+  </TabItem>
+</Tabs>
+
+## 3. Read the response
+You get a response like this, shortened here:
+
+```json
+{
+   "code":"000",
+   "content": {
+      "transactions": {
+         "status":"delivered",
+         "product_name":"MTN Airtime VTU",
+         "unique_element":"08011111111",
+         "amount":"100",
+         "commission":3.5,
+         "total_amount":96.5,
+         "transactionId":"17415980564672211596777904"
+      }
+   },
+   "response_description":"TRANSACTION SUCCESSFUL",
+   "requestId":"2025031010146932932"
+}
+```
+
+Check two values:
+
+- `code` is `000`, so VTpass processed your request.
+- `content.transactions.status` is `delivered`, so the airtime reached the phone number.
+
+Both must be true before you give value to a customer. A `000` code on its own isn't enough, because the status can still be `pending`. To learn why, see [Transaction lifecycle](/docs/explanation/transaction-lifecycle).
+
+Also notice `total_amount`. It's lower than `amount`, because VTpass charged your wallet ₦96.50 for ₦100 of airtime. The difference is your commission. See [Commission](/docs/explanation/commission).
+
+## 4. Confirm with a requery
+Check the transaction's status again with the requery endpoint, using the same request ID. In a real integration, you do this when a purchase is pending or times out.
+
+<Tabs>
+  <TabItem value="curl" label="Curl" default>
+   ```js
+  curl --request POST \
+  --url "https://sandbox.vtpass.com/api/requery" \
+  --header "api-key: YOUR_API_KEY" \
+  --header "secret-key: YOUR_SECRET_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{"request_id": "YOUR_REQUEST_ID"}'
+   ```
+  </TabItem>
+  <TabItem value="js" label="Javascript">
+    ```js showLineNumbers
+    const BASE_URL = "https://sandbox.vtpass.com/api"; // Switch to https://vtpass.com/api for live
+
+const response = await fetch(`${BASE_URL}/requery`, {
+  method: "POST",
+  headers: {
+    "api-key": "YOUR_API_KEY",
+    "secret-key": "YOUR_SECRET_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ request_id: "YOUR_REQUEST_ID" }),
+});
+
+const data = await response.json();
+console.log(data.code, data.content.transactions.status);
+    ```
+  </TabItem>
+</Tabs>
+
+The requery returns the same transaction, with `code` `000` and status `delivered`.
+
+## 5. Try a pending purchase
+Repeat steps 1 to 4 with the phone number `201000000000`. This sandbox test number returns a pending transaction, so you can see what your integration must handle when a purchase doesn't complete straight away.
+
+## Next steps
+You've made a purchase and confirmed it. Next:
+
+- Learn how to [handle pending transactions](/docs/how-to/handle-pending-transactions) in your code.
+- Browse the [services](/docs/reference/services/airtime) you can sell.
+- When you're ready, [go live](/docs/how-to/go-live).
