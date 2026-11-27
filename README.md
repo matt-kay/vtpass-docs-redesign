@@ -1,8 +1,155 @@
-# VTpass API documentation
+# VTpass API documentation: portfolio case study
 
-A redesign of the [VTpass](https://www.vtpass.com) API documentation, built with [Docusaurus](https://docusaurus.io). The VTpass API lets developers sell airtime, data, electricity, TV subscriptions, education PINs, and insurance from their own apps.
+> [!NOTE]
+> **Portfolio case study**: this project is an independent documentation engineering and developer experience redesign of the [VTpass API documentation](https://www.vtpass.com/documentation/). It uses [Docusaurus](https://docusaurus.io) and [Vale](https://vale.sh) to demonstrate information architecture, content consolidation, interactive developer tooling, and style guide automation.
 
-The redesign reorganizes the original documentation into clear sections, merges the separate pages for each provider into one page for each service, and adds the guides and concepts developers need to build a reliable integration.
+The VTpass API lets developers sell airtime, data, electricity, TV subscriptions, education PINs, and insurance from their own apps.
+
+This redesign reorganizes the original documentation into clear sections based on the [Diátaxis framework](https://diataxis.fr), merges duplicate provider pages into one canonical reference page per service, and adds the guides and concepts developers need to build a reliable integration.
+
+---
+
+## 1. Original documentation and measurable friction points
+
+The original VTpass API documentation creates friction for developers trying to understand the integration lifecycle, look up endpoints, or debug edge cases.
+
+### Original pages
+
+**Original introduction and flat sidebar navigation:**
+![Original VTpass introduction page](static/img/before_1.png)
+
+**Original Request ID specification:**
+![Original VTpass Request ID page](static/img/before_2.png)
+
+**Original Callback and Webhook integration page:**
+![Original VTpass Callback and Webhook page](static/img/before_3.png)
+
+### Key measurable friction points
+
+1. **Extreme page fragmentation and content duplication: 30+ provider pages reduced to 6 service pages**
+   - **The friction**: the original documentation created a separate page for every single provider across every service category, such as 4 separate pages for Airtime networks, 6 for Data, 12 for Electricity distribution companies, and 4 for TV providers. However, every provider in a category calls the exact same `/api/pay` and `/api/merchant-verify` endpoints with identical payload schemas.
+   - **Measurable impact**: developers integrating multi-provider bill payments had to open and cross-reference **12 separate pages** just to find the `serviceID` and test meter numbers for electricity providers, which resulted in an **83% redundancy rate** across reference pages.
+2. **Unimplementable specifications and missing code helpers: 0 runnable examples for Request ID and Webhooks**
+   - **The friction**: the original docs described critical integration requirements in plain text or capital-letter notes without runnable code. For example, the original Request ID page in `before_2.png` lists rules in capital letters requiring 12 or more numeric characters starting with today's date in the `Africa/Lagos` timezone, followed only by a one-line PHP array fragment. Similarly, the webhook page in `before_3.png` contains unfinished sentences and zero handler examples.
+   - **Measurable impact**: developers had to write custom timezone-aware `YYYYMMDDHHII` string generators in `Africa/Lagos` from scratch, making malformed `request_id` responses such as `014` and `016` common first-call failures.
+3. **High time-to-first-call and scattered onboarding prerequisites**
+   - **The friction**: no end-to-end onboarding tutorial existed. Core prerequisites—creating a sandbox account, generating API keys, whitelisting products, understanding authentication headers such as `api-key`, `public-key`, and `secret-key`, and running a first transaction—either lived under a generic *Learn how to use* menu or didn't exist at all.
+   - **Measurable impact**: a new developer had to piece together information across **5+ unlinked pages** before making a single valid sandbox request, and had no documented checklist for moving from sandbox to live, including IP whitelisting.
+4. **Static environment URLs and inconsistent parameter tables**
+   - **The friction**: the original pages hardcoded sandbox and live base URLs inconsistently, forcing developers to manually edit URLs when copying snippets. Furthermore, request tables used cryptic `M` and `O` shorthand for mandatory and optional fields, and omitted complete response field descriptions and actionable recovery steps for pending transaction codes `099` and `000`.
+   - **Measurable impact**: increased copy-paste errors when transitioning between sandbox testing and production, and higher integration risk around double-charging on pending transactions.
+
+---
+
+## 2. Information architecture: proposed sidebar navigation and user journey
+
+To resolve the flat, provider-scattered navigation of the original site, the redesign structures the documentation around the **[Diátaxis](https://diataxis.fr)** framework into five dedicated top-level sections, each with its own focused sidebar.
+
+### Proposed sidebar navigation
+
+```text
+VTpass API Documentation
+├── Overview
+│   ├── About this API document
+│   └── What's new
+├── Tutorials
+│   └── Get started
+│       ├── 1. Create a sandbox account
+│       ├── 2. Generate your API keys
+│       ├── 3. Whitelist products
+│       ├── 4. Make your first request
+│       └── 5. Make your first purchase
+├── How-to guides
+│   ├── Handle pending transactions
+│   ├── Webhooks
+│   │   ├── Set up your callback URL
+│   │   ├── Handle transaction update webhooks
+│   │   └── Handle variation codes update webhooks
+│   └── Go live with the VTpass API
+├── API reference
+│   ├── Authentication
+│   ├── Wallet balance
+│   ├── Requery
+│   ├── Service discovery
+│   │   ├── Available services
+│   │   ├── Service IDs
+│   │   ├── Variation codes
+│   │   └── Product options
+│   ├── Services
+│   │   ├── Airtime recharge        (consolidates MTN, Glo, Airtel, 9mobile, International)
+│   │   ├── Data subscription       (consolidates MTN, Glo, Airtel, 9mobile, Smile, Spectranet)
+│   │   ├── Electricity bill        (consolidates all 12 DisCos into 1 page + comparison table)
+│   │   ├── TV subscription         (consolidates DStv, GOtv, StarTimes, Showmax)
+│   │   ├── Education               (consolidates WAEC registration, WAEC result checker, JAMB)
+│   │   └── Insurance               (Third-party motor insurance)
+│   └── Response codes
+└── Concepts
+    ├── Transaction lifecycle
+    ├── Request ID
+    └── Commission
+```
+
+### Developer user journey
+
+The redesigned architecture maps directly to the four stages of a developer's integration lifecycle:
+
+```mermaid
+flowchart LR
+    A["1. Discover & Orient<br/>(Overview)"] --> B["2. Onboard & First Call<br/>(Tutorials)"]
+    B --> C["3. Build & Look Up<br/>(API Reference & Concepts)"]
+    C --> D["4. Harden & Launch<br/>(How-to Guides)"]
+
+    subgraph Stage 1
+    A1["Read About this API document"]
+    A2["Toggle Sandbox / Live switch"]
+    end
+
+    subgraph Stage 2
+    B1["Create sandbox account & keys"]
+    B2["Whitelist products"]
+    B3["Check wallet & make first purchase"]
+    end
+
+    subgraph Stage 3
+    C1["Generate Request ID"]
+    C2["Query Service Discovery endpoints"]
+    C3["Integrate consolidated Service pages"]
+    end
+
+    subgraph Stage 4
+    D1["Implement Requery & Webhooks"]
+    D2["Handle pending transactions safely"]
+    D3["Whitelist IPs & Go Live"]
+    end
+
+    A --- Stage 1
+    B --- Stage 2
+    C --- Stage 3
+    D --- Stage 4
+```
+
+1. **Discover and orient in `Overview`**: a developer lands on the homepage or [About this API document](docs/overview/about-this-doc.md), reviews all 6 supported service categories at a glance, learns the difference between the Sandbox and Live environments, and picks the entry point that matches their goal.
+2. **Onboard and make a first call in `Tutorials`**: new developers follow a linear, 5-step [Get started](docs/tutorials/getting-started/create-sandbox-account.md) path—from creating a sandbox account and whitelisting products to checking their wallet balance and completing a sandbox airtime purchase with a status requery.
+3. **Build and look up in `API reference` and `Concepts`**: while building features, developers copy the ready-to-use `Africa/Lagos` JavaScript generator from [Request ID](docs/explanation/request-id.md), check status transitions in [Transaction lifecycle](docs/explanation/transaction-lifecycle.md), and look up endpoints in the consolidated [Services](docs/reference/services/electricity.mdx) reference pages—using the global **Sandbox / Live** toggle in the navigation bar to switch base URLs across all code blocks and tables automatically.
+4. **Harden and launch in `How-to guides`**: before serving real customers, developers follow task-focused guides to [handle pending transactions](docs/how-to/handle-pending-transactions.mdx) without double-debiting, verify [webhooks](docs/how-to/webhooks/set-up-callback-url.mdx), and complete the production checklist in [Go live with the VTpass API](docs/how-to/go-live.md).
+
+---
+
+## 3. Redesigned documentation screenshots
+
+**Redesigned landing page with 4-step onboarding cards, service directory, and global Sandbox/Live switch:**
+![Redesigned VTpass landing page](static/img/redesigned_1.png)
+
+**Redesigned Overview section with target audience, service table, and environment conventions:**
+![Redesigned Overview page](static/img/redesigned_3.png)
+
+**Redesigned step-by-step Get Started tutorial with dedicated sidebar and table of contents:**
+![Redesigned Tutorials page](static/img/redesigned_2.png)
+
+**Redesigned Request ID concept page with clear validation callouts and a copyable JavaScript helper:**
+![Redesigned Request ID concept page](static/img/redesigned_4.png)
+
+---
 
 ## What's in the redesign
 - **Structure based on [Diátaxis](https://diataxis.fr)**: the docs have five sections, which are Overview, Tutorials, How-to guides, API reference, and Concepts.
