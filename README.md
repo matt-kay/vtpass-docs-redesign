@@ -95,37 +95,28 @@ The redesigned architecture maps directly to the four stages of a developer's in
 
 ```mermaid
 flowchart LR
-    A["1. Discover & Orient<br/>(Overview)"] --> B["2. Onboard & First Call<br/>(Tutorials)"]
-    B --> C["3. Build & Look Up<br/>(API Reference & Concepts)"]
-    C --> D["4. Harden & Launch<br/>(How-to Guides)"]
-
-    subgraph Stage 1
-    A1["Read About this API document"]
-    A2["Toggle Sandbox / Live switch"]
+    subgraph Stage1["1. Discover and orient (Overview)"]
+        A1["Read About this API document"] --> A2["Toggle Sandbox / Live switch"]
     end
 
-    subgraph Stage 2
-    B1["Create sandbox account & keys"]
-    B2["Whitelist products"]
-    B3["Check wallet & make first purchase"]
+    subgraph Stage2["2. Onboard and first call (Tutorials)"]
+        B1["Create sandbox account and keys"] --> B2["Whitelist products"]
+        B2 --> B3["Check wallet and make first purchase"]
     end
 
-    subgraph Stage 3
-    C1["Generate Request ID"]
-    C2["Query Service Discovery endpoints"]
-    C3["Integrate consolidated Service pages"]
+    subgraph Stage3["3. Build and look up (Reference & Concepts)"]
+        C1["Generate Request ID"] --> C2["Query Service Discovery endpoints"]
+        C2 --> C3["Integrate consolidated Service pages"]
     end
 
-    subgraph Stage 4
-    D1["Implement Requery & Webhooks"]
-    D2["Handle pending transactions safely"]
-    D3["Whitelist IPs & Go Live"]
+    subgraph Stage4["4. Harden and launch (How-to guides)"]
+        D1["Implement Requery and Webhooks"] --> D2["Handle pending transactions safely"]
+        D2 --> D3["Whitelist IPs and Go Live"]
     end
 
-    A --- Stage 1
-    B --- Stage 2
-    C --- Stage 3
-    D --- Stage 4
+    Stage1 --> Stage2
+    Stage2 --> Stage3
+    Stage3 --> Stage4
 ```
 
 1. **Discover and orient in `Overview`**: a developer lands on the homepage or [About this API document](docs/overview/about-this-doc.md), reviews all 6 supported service categories at a glance, learns the difference between the Sandbox and Live environments, and picks the entry point that matches their goal.
